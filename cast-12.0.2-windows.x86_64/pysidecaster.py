@@ -443,7 +443,7 @@ def main():
     device = 'cpu'
     model = get_efficientunet_b0(out_channels=1, concat_input=False, pretrained=False).to(device)
     # TODO: add model and update path
-    model.load_state_dict(torch.load('./EfficientUNet.pth'))
+    model.load_state_dict(torch.load('./EfficientUNet.pth', map_location=torch.device('cpu')))
     widget = MainWidget(cast, model, device)
     widget.resize(640, 480)
     widget.show()
