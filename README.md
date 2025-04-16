@@ -136,3 +136,24 @@ cast-12.0.2-macos.arm64/
 ---
 
 ## 🎉 Connect US Clarius Device from iPad
+
+
+## Another Installation method for MAC
+
+
+# setup (Mac)
+Use conda for your virtual environment. In the cast-12.0.2-macos.arm64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
+
+the command to copy the dylib to the correct folder should look something like this:
+## cp ./cast-12.0.2-macos.arm64/libcast.dylib /opt/homebrew/Caskroom/miniconda/NAME_OF_CONDA_ENV/bin/../lib/
+
+# setup (Windows)
+Use conda for your virtual environment. In the cast-12.0.2-windows.x86_64 folder there is a libcast.pyd file that you need to copy over to your conda environment's DLL folder.
+
+the command to copy the dylib to the correct folder should look something like this:
+## cp ./cast-12.0.2-macos.arm64/libcast.dylib /opt/homebrew/Caskroom/miniconda/NAME_OF_CONDA_ENV/bin/../lib/
+
+# TODO:
+- create a yaml / requirements.txt with required libraries
+- test segmentation / resizing logic
+- check that model can be loaded
