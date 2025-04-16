@@ -5,6 +5,13 @@ import os.path
 import sys
 from pathlib import Path
 from typing import Final
+from PIL import Image
+from torchvision import transforms
+import torch
+import numpy as np
+sys.path.append("/Users/rahul.prabhu/RealtimeUltrasoundSegmentation")
+from Efficientunet.efficientunet import get_efficientunet_b0
+from skimage.transform import resize
 
 if sys.platform.startswith("linux"):
     libcast_handle = ctypes.CDLL("./libcast.so", ctypes.RTLD_GLOBAL)._handle  # load the libcast.so shared library
@@ -72,14 +79,17 @@ signaller = Signaller()
 
 # draws the ultrasound image
 class ImageView(QtWidgets.QGraphicsView):
-    def __init__(self, cast):
+    def __init__(self, cast, model, device):
         QtWidgets.QGraphicsView.__init__(self)
         self.cast = cast
+        self.model = model
+        self.device = device
         self.setScene(QtWidgets.QGraphicsScene())
 
     # set the new image and redraw
     def updateImage(self, img):
-        self.image = img
+        segmented_img = self.segment_image(img)
+        self.image = segmented_img
         self.scene().invalidate()
 
     # saves a local image
@@ -104,10 +114,71 @@ class ImageView(QtWidgets.QGraphicsView):
         if not self.image.isNull():
             painter.drawImage(rect, self.image)
 
+    def segment_image(self, img):
+        img_np = self.qimage_to_numpy(img)
+        original_height, original_width = img_np.shape[:2]  # Get the original image size
+        
+        # Convert to PIL Image (for compatibility with torchvision transforms)
+        img_pil = Image.fromarray(img_np)
+
+        # Define the necessary transforms (resize, normalize, etc.)
+        transform = transforms.Compose([
+            transforms.CenterCrop(218),        # Crop the center 218x218
+            transforms.Resize((512, 512)),     # Resize to 512x512
+            transforms.ToTensor(),             # Convert to tensor
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Normalize
+        ])
+
+        img_tensor = transform(img_pil).unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            output = self.model(img_tensor)  # Run the model
+
+        # Post-process the model output
+        segmentation_map = torch.argmax(output, dim=1).squeeze().cpu().numpy()  # Get the class with the highest score
+
+        # Resize the segmentation map back to the original image size
+        resized_segmentation_map = self.resize_segmentation_map(segmentation_map, (original_width, original_height))
+
+        # Map the output to a color for visualization
+        return self.apply_colormap(resized_segmentation_map)
+
+    def resize_segmentation_map(self, segmentation_map, target_size):
+        resized_map = resize(segmentation_map, target_size, order=1, mode='reflect', anti_aliasing=True)
+        return (resized_map > 0.5).astype(np.uint8)  # Threshold for segmentation map
+
+    def apply_colormap(self, segmentation_map):
+        colormap = np.array([
+            [0, 0, 0],      # background
+            [255, 0, 0],    # (red)
+        ])
+        
+        # Map segmentation output to colors
+        segmented_image = colormap[segmentation_map]
+        return segmented_image
+
+    def convert_to_qimage(self, img_np):
+        """
+        Convert a NumPy array (image) into a QImage.
+        """
+        height, width, channels = img_np.shape
+        bytes_per_line = channels * width
+        qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+        return qimage
+
+    def qimage_to_numpy(self, img):
+        """
+        Convert a QImage to a NumPy array.
+        """
+        img_p = img.convertToFormat(QtGui.QImage.Format_RGB888)
+        img_str = img_p.bits().asstring(img_p.byteCount())
+        img_np = np.frombuffer(img_str, dtype=np.uint8).reshape((img_p.height(), img_p.width(), 3))
+        return img_np
+
 
 # main widget with controls and ui
 class MainWidget(QtWidgets.QMainWindow):
-    def __init__(self, cast, parent=None):
+    def __init__(self, cast, model, device, parent=None):
         QtWidgets.QMainWindow.__init__(self, parent)
 
         self.cast = cast
@@ -213,7 +284,7 @@ class MainWidget(QtWidgets.QMainWindow):
         cfiMode.clicked.connect(tryCfiMode)
 
         # add widgets to layout
-        self.img = ImageView(cast)
+        self.img = ImageView(cast, model, device)
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.img)
 
@@ -308,6 +379,7 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     signaller.usimage = img.copy()
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
+    print('here')
     img.save("./processed_image.png")
     return
 
@@ -367,7 +439,11 @@ def buttonsFn(button, clicks):
 def main():
     cast = pyclariuscast.Caster(newProcessedImage, newRawImage, newSpectrumImage, newImuData, freezeFn, buttonsFn)
     app = QtWidgets.QApplication(sys.argv)
-    widget = MainWidget(cast)
+    device = 'cpu'
+    model = get_efficientunet_b0(out_channels=1, concat_input=False, pretrained=False).to(device)
+    # TODO: add model and update path
+    model.load_state_dict(torch.load('./EfficientUNet.pth')) 
+    widget = MainWidget(cast, model, device)
     widget.resize(640, 480)
     widget.show()
     sys.exit(app.exec())
