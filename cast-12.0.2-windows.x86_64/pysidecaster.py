@@ -9,8 +9,9 @@ from PIL import Image
 from torchvision import transforms
 import torch
 import numpy as np
-sys.path.append("/Users/rahul.prabhu/RealtimeUltrasoundSegmentation")
-from Efficientunet.efficientunet import get_efficientunet_b0
+# sys.path.append("/Users/rahul.prabhu/RealtimeUltrasoundSegmentation")
+# from Efficientunet.efficientunet import get_efficientunet_b0
+from efficientunet import get_efficientunet_b0
 from skimage.transform import resize
 
 if sys.platform.startswith("linux"):
@@ -442,7 +443,7 @@ def main():
     device = 'cpu'
     model = get_efficientunet_b0(out_channels=1, concat_input=False, pretrained=False).to(device)
     # TODO: add model and update path
-    model.load_state_dict(torch.load('./EfficientUNet.pth')) 
+    model.load_state_dict(torch.load('./EfficientUNet.pth'))
     widget = MainWidget(cast, model, device)
     widget.resize(640, 480)
     widget.show()
