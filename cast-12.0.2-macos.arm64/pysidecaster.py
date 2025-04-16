@@ -10,7 +10,7 @@ from torchvision import transforms
 import torch
 import numpy as np
 # sys.path.append("C:\\Users\\Junfei\\Desktop\\Repos\\RealtimeUltrasoundSegmentation")
-# from Efficientunet.efficientunet import get_efficientunet_b0
+#from Efficientunet.efficientunet import get_efficientunet_b0
 from efficientunet import get_efficientunet_b0
 from skimage.transform import resize
 
@@ -90,6 +90,7 @@ class ImageView(QtWidgets.QGraphicsView):
     # set the new image and redraw
     def updateImage(self, img):
         segmented_img = self.segment_image(img)
+        #segmented_img = img
         self.image = segmented_img
         self.scene().invalidate()
 
@@ -167,14 +168,17 @@ class ImageView(QtWidgets.QGraphicsView):
         qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
         return qimage
 
-    def qimage_to_numpy(self, img):
+    def qimage_to_numpy(self, img: QtGui.QImage):
         """
         Convert a QImage to a NumPy array.
         """
-        img_p = img.convertToFormat(QtGui.QImage.Format_RGB888)
-        img_str = img_p.bits().asstring(img_p.byteCount())
-        img_np = np.frombuffer(img_str, dtype=np.uint8).reshape((img_p.height(), img_p.width(), 3))
-        return img_np
+        img_grey = img.convertToFormat(QtGui.QImage.Format_Indexed8)
+        #img_str = img_p.constBits().(img_p.byteCount())
+        print(img_grey.format().name, img_grey.format().value)
+        ptr = img_grey.constBits()
+        ptr.setsize(img.height() * img.width() * 1)
+        #img_np = np.frombuffer(img_str, dtype=np.uint8).reshape((img_p.height(), img_p.width(), 3))
+        return np.array(ptr).reshape(img.height(), img.width(), 1)
 
 
 # main widget with controls and ui
@@ -443,7 +447,7 @@ def main():
     device = 'cpu'
     model = get_efficientunet_b0(out_channels=1, concat_input=False, pretrained=False).to(device)
     # TODO: add model and update path
-    model.load_state_dict(torch.load('./EfficientUNet.pth')) 
+    #model.load_state_dict(torch.load('./EfficientUNet.pth')) 
     widget = MainWidget(cast, model, device)
     widget.resize(640, 480)
     widget.show()
