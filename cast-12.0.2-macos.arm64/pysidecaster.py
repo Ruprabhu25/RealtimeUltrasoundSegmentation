@@ -9,8 +9,9 @@ from PIL import Image
 from torchvision import transforms
 import torch
 import numpy as np
-sys.path.append("/Users/rahul.prabhu/RealtimeUltrasoundSegmentation")
-from Efficientunet.efficientunet import get_efficientunet_b0
+# sys.path.append("C:\\Users\\Junfei\\Desktop\\Repos\\RealtimeUltrasoundSegmentation")
+# from Efficientunet.efficientunet import get_efficientunet_b0
+from efficientunet import get_efficientunet_b0
 from skimage.transform import resize
 
 if sys.platform.startswith("linux"):
