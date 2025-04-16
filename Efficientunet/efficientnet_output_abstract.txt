@@ -1,0 +1,306 @@
+C:\Users\Jeff\AppData\Local\Temp\ipykernel_50580\3074383525.py:5: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  model.load_state_dict(torch.load('./model_fold_1.pth'))
+Prediction time for batch 0 with batch size 4: 0.09335112571716309 seconds
+Prediction time for batch 1 with batch size 4: 0.08713650703430176 seconds
+Prediction time for batch 2 with batch size 4: 0.11528801918029785 seconds
+Prediction time for batch 3 with batch size 4: 0.10626649856567383 seconds
+Prediction time for batch 4 with batch size 4: 0.09590435028076172 seconds
+Average Dice Coef: nan, Average TPR: nan, Average FPR: nan, Average Hausdorff Distance: nan, Average Prediction Time: 0.02489732503890991
+c:\Users\Jeff\anaconda3\envs\ultrasound\lib\site-packages\numpy\core\fromnumeric.py:3432: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+c:\Users\Jeff\anaconda3\envs\ultrasound\lib\site-packages\numpy\core\_methods.py:190: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+C:\Users\Jeff\AppData\Local\Temp\ipykernel_11164\2090685341.py:37: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  train_loaders = torch.load(train_path)
+C:\Users\Jeff\AppData\Local\Temp\ipykernel_11164\2090685341.py:38: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  test_loaders = torch.load(test_path)
+Fold [1/3], Epoch [1/20] - Loss: 0.7318522367212508
+Fold [1/3], Epoch [2/20] - Loss: 0.6625510089927249
+Fold [1/3], Epoch [3/20] - Loss: 0.6242866184976366
+Fold [1/3], Epoch [4/20] - Loss: 0.5832494133048587
+Fold [1/3], Epoch [5/20] - Loss: 0.538997878630956
+Fold [1/3] - Liver - Average Dice Coef: 0.21862943470478058, Average TPR: 1.0, Average FPR: 1.0, Average Hausdorff: 651.714091674727
+Fold [1/3] - Abd Wall - Average Dice Coef: 0.21862943470478058, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [1/3], Epoch [6/20] - Loss: 0.48932584789064193
+Fold [1/3], Epoch [7/20] - Loss: 0.4408659835656484
+Fold [1/3], Epoch [8/20] - Loss: 0.3917565759685304
+Fold [1/3], Epoch [9/20] - Loss: 0.3438521805736754
+Fold [1/3], Epoch [10/20] - Loss: 0.2952544093132019
+Fold [1/3] - Liver - Average Dice Coef: 0.21887236833572388, Average TPR: 1.0, Average FPR: 0.9985760450363159, Average Hausdorff: 638.4545657473772
+Fold [1/3] - Abd Wall - Average Dice Coef: 0.21887236833572388, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [1/3], Epoch [11/20] - Loss: 0.2478479246298472
+Fold [1/3], Epoch [12/20] - Loss: 0.190411110719045
+Fold [1/3], Epoch [13/20] - Loss: 0.15646379192670187
+Fold [1/3], Epoch [14/20] - Loss: 0.13245299292935264
+Fold [1/3], Epoch [15/20] - Loss: 0.1113381071223153
+Fold [1/3] - Liver - Average Dice Coef: 0.22392810881137848, Average TPR: 1.0, Average FPR: 0.9696434736251831, Average Hausdorff: 554.9877537974904
+Fold [1/3] - Abd Wall - Average Dice Coef: 0.22392810881137848, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [1/3], Epoch [16/20] - Loss: 0.09734923475318485
+Fold [1/3], Epoch [17/20] - Loss: 0.08984016213152143
+Fold [1/3], Epoch [18/20] - Loss: 0.08310773140854305
+Fold [1/3], Epoch [19/20] - Loss: 0.07342130442460378
+Fold [1/3], Epoch [20/20] - Loss: 0.06660025815169017
+Fold [1/3] - Liver - Average Dice Coef: 0.22572344541549683, Average TPR: 1.0, Average FPR: 0.9596742987632751, Average Hausdorff: 547.322134508845
+Fold [1/3] - Abd Wall - Average Dice Coef: 0.22572344541549683, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Model saved at C:\Users\Jeff\Desktop\liver_ultrasound\clean/Efficientunet/results/shared/models/model_fold_1.pth
+Fold [1/3]  - Liver - Average Dice Coef: 0.22572344541549683, Average TPR: 1.0, Average FPR: 0.9596742987632751, Average Hausdorff: 547.3221345088449
+Fold [1/3] - Abd Wall - Average Dice Coef: 0.22572344541549683, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [2/3], Epoch [1/20] - Loss: 0.7263893551296658
+Fold [2/3], Epoch [2/20] - Loss: 0.6629378663169013
+Fold [2/3], Epoch [3/20] - Loss: 0.6174540784623888
+Fold [2/3], Epoch [4/20] - Loss: 0.569423152340783
+Fold [2/3], Epoch [5/20] - Loss: 0.5188337117433548
+Fold [2/3] - Liver - Average Dice Coef: 8.000507477845531e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [2/3] - Abd Wall - Average Dice Coef: 8.000507477845531e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [2/3], Epoch [6/20] - Loss: 0.46511364810996586
+Fold [2/3], Epoch [7/20] - Loss: 0.40160006781419116
+Fold [2/3], Epoch [8/20] - Loss: 0.343616536921925
+Fold [2/3], Epoch [9/20] - Loss: 0.29511475563049316
+Fold [2/3], Epoch [10/20] - Loss: 0.2453335854742262
+Fold [2/3] - Liver - Average Dice Coef: 8.00050656835083e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [2/3] - Abd Wall - Average Dice Coef: 8.00050656835083e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [2/3], Epoch [11/20] - Loss: 0.20676553580496046
+Fold [2/3], Epoch [12/20] - Loss: 0.17830417222446865
+Fold [2/3], Epoch [13/20] - Loss: 0.1526028248998854
+Fold [2/3], Epoch [14/20] - Loss: 0.130553705824746
+Fold [2/3], Epoch [15/20] - Loss: 0.1137723641263114
+Fold [2/3] - Liver - Average Dice Coef: 8.00050656835083e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [2/3] - Abd Wall - Average Dice Coef: 8.00050656835083e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [2/3], Epoch [16/20] - Loss: 0.1023292491833369
+Fold [2/3], Epoch [17/20] - Loss: 0.0902786072757509
+Fold [2/3], Epoch [18/20] - Loss: 0.08264305028650495
+Fold [2/3], Epoch [19/20] - Loss: 0.07527481681770748
+Fold [2/3], Epoch [20/20] - Loss: 0.06938581168651581
+Fold [2/3] - Liver - Average Dice Coef: 0.23325897753238678, Average TPR: 0.9999993443489075, Average FPR: 0.9055055975914001, Average Hausdorff: 600.0808840006824
+Fold [2/3] - Abd Wall - Average Dice Coef: 0.23325897753238678, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Model saved at C:\Users\Jeff\Desktop\liver_ultrasound\clean/Efficientunet/results/shared/models/model_fold_2.pth
+Fold [2/3]  - Liver - Average Dice Coef: 0.23325876891613007, Average TPR: 0.9999993443489075, Average FPR: 0.9055067300796509, Average Hausdorff: 600.0989217820198
+Fold [2/3] - Abd Wall - Average Dice Coef: 0.23325876891613007, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3], Epoch [1/20] - Loss: 0.7342122263378568
+Fold [3/3], Epoch [2/20] - Loss: 0.6770331131087409
+Fold [3/3], Epoch [3/20] - Loss: 0.6440751585695479
+Fold [3/3], Epoch [4/20] - Loss: 0.6093195643689897
+Fold [3/3], Epoch [5/20] - Loss: 0.5726731916268667
+Fold [3/3] - Liver - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3] - Abd Wall - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3], Epoch [6/20] - Loss: 0.5306082235442268
+Fold [3/3], Epoch [7/20] - Loss: 0.49243082602818805
+Fold [3/3], Epoch [8/20] - Loss: 0.4508093016015159
+Fold [3/3], Epoch [9/20] - Loss: 0.40845685535007054
+Fold [3/3], Epoch [10/20] - Loss: 0.3614333040184445
+Fold [3/3] - Liver - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3] - Abd Wall - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3], Epoch [11/20] - Loss: 0.3071124255657196
+Fold [3/3], Epoch [12/20] - Loss: 0.2587901254494985
+Fold [3/3], Epoch [13/20] - Loss: 0.22137455311086443
+Fold [3/3], Epoch [14/20] - Loss: 0.19004822770754495
+Fold [3/3], Epoch [15/20] - Loss: 0.15959606568018594
+Fold [3/3] - Liver - Average Dice Coef: 8.003442417248152e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3] - Abd Wall - Average Dice Coef: 8.003442417248152e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3], Epoch [16/20] - Loss: 0.12224696245458391
+Fold [3/3], Epoch [17/20] - Loss: 0.10499476227495405
+Fold [3/3], Epoch [18/20] - Loss: 0.09419317377938165
+Fold [3/3], Epoch [19/20] - Loss: 0.0843730949693256
+Fold [3/3], Epoch [20/20] - Loss: 0.07762922512160407
+Fold [3/3] - Liver - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3] - Abd Wall - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Model saved at C:\Users\Jeff\Desktop\liver_ultrasound\clean/Efficientunet/results/shared/models/model_fold_3.pth
+Fold [3/3]  - Liver - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+Fold [3/3] - Abd Wall - Average Dice Coef: 8.003443326742854e-06, Average TPR: 0.0, Average FPR: 0.0, Average Hausdorff: inf
+
+Fold [1/3], Epoch [51/50] - Loss: 0.021673325035307143
+Fold [1/3], Epoch [52/50] - Loss: 0.020301855272716947
+Fold [1/3], Epoch [53/50] - Loss: 0.019206513961156208
+Fold [1/3], Epoch [54/50] - Loss: 0.01884911623266008
+Fold [1/3], Epoch [55/50] - Loss: 0.018100869324472215
+Fold [1/3], Epoch [56/50] - Loss: 0.018197574549251132
+Fold [1/3], Epoch [57/50] - Loss: 0.017900329497125413
+Fold [1/3], Epoch [58/50] - Loss: 0.016836977667278714
+Fold [1/3], Epoch [59/50] - Loss: 0.01676988270547655
+Fold [1/3], Epoch [60/50] - Loss: 0.017246541049745347
+Fold [1/3] - Average Dice Coef: 0.9340760111808777, Average TPR: 0.9521060585975647, Average FPR: 0.011648347601294518, Average Hausdorff: 64.86072336914168
+Fold [1/3] - Average Dice Coef: 0.9340760111808777, Average TPR: 0.955586314201355, Average FPR: 0.0008073846693150699, Average Hausdorff: 22.57430101959684
+Fold [1/3], Epoch [61/50] - Loss: 0.016433200902409024
+Fold [1/3], Epoch [62/50] - Loss: 0.016338565283351474
+Fold [1/3], Epoch [63/50] - Loss: 0.016268816259172227
+Fold [1/3], Epoch [64/50] - Loss: 0.015920115841759577
+Fold [1/3], Epoch [65/50] - Loss: 0.015730382667647466
+Fold [1/3], Epoch [66/50] - Loss: 0.015614956617355347
+Fold [1/3], Epoch [67/50] - Loss: 0.015329413943820529
+Fold [1/3], Epoch [68/50] - Loss: 0.015141634477509392
+Fold [1/3], Epoch [69/50] - Loss: 0.014865443110466003
+Fold [1/3], Epoch [70/50] - Loss: 0.01506766676902771
+Fold [1/3] - Average Dice Coef: 0.9346497058868408, Average TPR: 0.941234827041626, Average FPR: 0.009662088006734848, Average Hausdorff: 65.39672576651898
+Fold [1/3] - Average Dice Coef: 0.9346497058868408, Average TPR: 0.9619556069374084, Average FPR: 0.0009780831169337034, Average Hausdorff: 31.59487068817182
+Fold [1/3], Epoch [71/50] - Loss: 0.014865550729963515
+Fold [1/3], Epoch [72/50] - Loss: 0.014515227741665311
+Fold [1/3], Epoch [73/50] - Loss: 0.01454831494225396
+Fold [1/3], Epoch [74/50] - Loss: 0.014097031619813707
+Fold [1/3], Epoch [75/50] - Loss: 0.014300187428792318
+Fold [1/3], Epoch [76/50] - Loss: 0.014219737715191312
+Fold [1/3], Epoch [77/50] - Loss: 0.013931680056783888
+Fold [1/3], Epoch [78/50] - Loss: 0.013900289932886759
+Fold [1/3], Epoch [79/50] - Loss: 0.013516508870654635
+Fold [1/3], Epoch [80/50] - Loss: 0.014025479555130005
+Fold [1/3] - Average Dice Coef: 0.9341537952423096, Average TPR: 0.9423092603683472, Average FPR: 0.009959833696484566, Average Hausdorff: 73.10561060115077
+Fold [1/3] - Average Dice Coef: 0.9341537952423096, Average TPR: 0.9571735858917236, Average FPR: 0.0008726078667677939, Average Hausdorff: 41.83354528502935
+Fold [1/3], Epoch [81/50] - Loss: 0.013888781269391378
+Fold [1/3], Epoch [82/50] - Loss: 0.014929675393634372
+Fold [1/3], Epoch [83/50] - Loss: 0.013361361291673448
+Fold [1/3], Epoch [84/50] - Loss: 0.01346517437034183
+Fold [1/3], Epoch [85/50] - Loss: 0.013733436663945517
+Fold [1/3], Epoch [86/50] - Loss: 0.013786789443757799
+Fold [1/3], Epoch [87/50] - Loss: 0.014011810223261515
+Fold [1/3], Epoch [88/50] - Loss: 0.013426646590232849
+Fold [1/3], Epoch [89/50] - Loss: 0.01306632657845815
+Fold [1/3], Epoch [90/50] - Loss: 0.01302806536356608
+Fold [1/3] - Average Dice Coef: 0.9366226196289062, Average TPR: 0.943338930606842, Average FPR: 0.009435411542654037, Average Hausdorff: 78.12057882619894
+Fold [1/3] - Average Dice Coef: 0.9366226196289062, Average TPR: 0.9596273899078369, Average FPR: 0.0008964836597442627, Average Hausdorff: 39.31090517570721
+Fold [1/3], Epoch [91/50] - Loss: 0.0127638578414917
+Fold [1/3], Epoch [92/50] - Loss: 0.012846257951524522
+Fold [1/3], Epoch [93/50] - Loss: 0.012670699093076918
+Fold [1/3], Epoch [94/50] - Loss: 0.012601839171515571
+Fold [1/3], Epoch [95/50] - Loss: 0.01279224952061971
+Fold [1/3], Epoch [96/50] - Loss: 0.012323323223325942
+Fold [1/3], Epoch [97/50] - Loss: 0.012439699636565315
+Fold [1/3], Epoch [98/50] - Loss: 0.01266893082194858
+Fold [1/3], Epoch [99/50] - Loss: 0.012130601538552178
+Fold [1/3], Epoch [100/50] - Loss: 0.011695828702714708
+Fold [1/3] - Average Dice Coef: 0.9351891279220581, Average TPR: 0.9398701190948486, Average FPR: 0.009272068738937378, Average Hausdorff: 82.40583798898297
+Fold [1/3] - Average Dice Coef: 0.9351891279220581, Average TPR: 0.958242654800415, Average FPR: 0.0008703554049134254, Average Hausdorff: 22.889773602731836
+Model saved at ./model_fold_1_continued.pth
+Fold [1/3] - Average Dice Coef: 0.9351892471313477, Average TPR: 0.9398699998855591, Average FPR: 0.009272067807614803, Average Hausdorff: 82.40583798898295
+Fold [1/3] - Average Dice Coef: 0.9351892471313477, Average TPR: 0.958242654800415, Average FPR: 0.0008703554049134254, Average Hausdorff: 22.889773602731836
+Fold [2/3], Epoch [51/50] - Loss: 0.021431422895855375
+Fold [2/3], Epoch [52/50] - Loss: 0.020624632636706035
+Fold [2/3], Epoch [53/50] - Loss: 0.019905479417906866
+Fold [2/3], Epoch [54/50] - Loss: 0.018920438157187566
+Fold [2/3], Epoch [55/50] - Loss: 0.01898816227912903
+Fold [2/3], Epoch [56/50] - Loss: 0.01844975021150377
+Fold [2/3], Epoch [57/50] - Loss: 0.017539598875575595
+Fold [2/3], Epoch [58/50] - Loss: 0.017409470346238878
+Fold [2/3], Epoch [59/50] - Loss: 0.016892280843522813
+Fold [2/3], Epoch [60/50] - Loss: 0.01638549069563548
+Fold [2/3] - Average Dice Coef: 0.9354156255722046, Average TPR: 0.9331799149513245, Average FPR: 0.007887102663516998, Average Hausdorff: 90.7893051844904
+Fold [2/3] - Average Dice Coef: 0.9354156255722046, Average TPR: 0.9723167419433594, Average FPR: 0.0011981449788436294, Average Hausdorff: 49.91159467153463
+Fold [2/3], Epoch [61/50] - Loss: 0.016446853677431744
+Fold [2/3], Epoch [62/50] - Loss: 0.016171958711412217
+Fold [2/3], Epoch [63/50] - Loss: 0.016350204745928448
+Fold [2/3], Epoch [64/50] - Loss: 0.015999452935324773
+Fold [2/3], Epoch [65/50] - Loss: 0.01576570338673062
+Fold [2/3], Epoch [66/50] - Loss: 0.01571777297390832
+Fold [2/3], Epoch [67/50] - Loss: 0.015131081144014994
+Fold [2/3], Epoch [68/50] - Loss: 0.015372652146551345
+Fold [2/3], Epoch [69/50] - Loss: 0.015498404701550802
+Fold [2/3], Epoch [70/50] - Loss: 0.015269582470258078
+Fold [2/3] - Average Dice Coef: 0.9349942803382874, Average TPR: 0.9306673407554626, Average FPR: 0.00769761810079217, Average Hausdorff: 69.08090159614642
+Fold [2/3] - Average Dice Coef: 0.9349942803382874, Average TPR: 0.9660508036613464, Average FPR: 0.0010508241830393672, Average Hausdorff: 34.00587833581746
+Fold [2/3], Epoch [71/50] - Loss: 0.015114741192923652
+Fold [2/3], Epoch [72/50] - Loss: 0.014352536863750882
+Fold [2/3], Epoch [73/50] - Loss: 0.01440189778804779
+Fold [2/3], Epoch [74/50] - Loss: 0.014187572730912102
+Fold [2/3], Epoch [75/50] - Loss: 0.01424556639459398
+Fold [2/3], Epoch [76/50] - Loss: 0.01436892482969496
+Fold [2/3], Epoch [77/50] - Loss: 0.013606152600712247
+Fold [2/3], Epoch [78/50] - Loss: 0.014072383443514505
+Fold [2/3], Epoch [79/50] - Loss: 0.013918370008468628
+Fold [2/3], Epoch [80/50] - Loss: 0.013951745298173692
+Fold [2/3] - Average Dice Coef: 0.9355583190917969, Average TPR: 0.9359992146492004, Average FPR: 0.00835435651242733, Average Hausdorff: 76.35551432443579
+Fold [2/3] - Average Dice Coef: 0.9355583190917969, Average TPR: 0.9688076376914978, Average FPR: 0.001137462561018765, Average Hausdorff: 79.40057994377634
+Fold [2/3], Epoch [81/50] - Loss: 0.0136127769947052
+Fold [2/3], Epoch [82/50] - Loss: 0.014122666584120857
+Fold [2/3], Epoch [83/50] - Loss: 0.013475919763247171
+Fold [2/3], Epoch [84/50] - Loss: 0.01400897569126553
+Fold [2/3], Epoch [85/50] - Loss: 0.01328184207280477
+Fold [2/3], Epoch [86/50] - Loss: 0.013747768269644843
+Fold [2/3], Epoch [87/50] - Loss: 0.013302546408441331
+Fold [2/3], Epoch [88/50] - Loss: 0.013170285357369317
+Fold [2/3], Epoch [89/50] - Loss: 0.013083923194143508
+Fold [2/3], Epoch [90/50] - Loss: 0.012985005974769592
+Fold [2/3] - Average Dice Coef: 0.9368124008178711, Average TPR: 0.941161572933197, Average FPR: 0.00881347805261612, Average Hausdorff: 69.65790920020918
+Fold [2/3] - Average Dice Coef: 0.9368124008178711, Average TPR: 0.9673497676849365, Average FPR: 0.001073357998393476, Average Hausdorff: 63.52586312468163
+Fold [2/3], Epoch [91/50] - Loss: 0.0125377443101671
+Fold [2/3], Epoch [92/50] - Loss: 0.012808652387724983
+Fold [2/3], Epoch [93/50] - Loss: 0.012997345791922675
+Fold [2/3], Epoch [94/50] - Loss: 0.012958543168173896
+Fold [2/3], Epoch [95/50] - Loss: 0.012726131412718032
+Fold [2/3], Epoch [96/50] - Loss: 0.012656496630774604
+Fold [2/3], Epoch [97/50] - Loss: 0.012785957919226753
+Fold [2/3], Epoch [98/50] - Loss: 0.012227071656121148
+Fold [2/3], Epoch [99/50] - Loss: 0.012471349702941047
+Fold [2/3], Epoch [100/50] - Loss: 0.012150540947914124
+Fold [2/3] - Average Dice Coef: 0.9368631839752197, Average TPR: 0.9354666471481323, Average FPR: 0.007848335430026054, Average Hausdorff: 77.64401187700945
+Fold [2/3] - Average Dice Coef: 0.9368631839752197, Average TPR: 0.9662473201751709, Average FPR: 0.0010956272017210722, Average Hausdorff: 43.58593896314138
+Model saved at ./model_fold_2_continued.pth
+Fold [2/3] - Average Dice Coef: 0.9368626475334167, Average TPR: 0.9354659914970398, Average FPR: 0.007848365232348442, Average Hausdorff: 77.64401187700946
+Fold [2/3] - Average Dice Coef: 0.9368626475334167, Average TPR: 0.9662467837333679, Average FPR: 0.001095543266274035, Average Hausdorff: 43.58593896314138
+Fold [3/3], Epoch [51/50] - Loss: 0.022336133652263217
+Fold [3/3], Epoch [52/50] - Loss: 0.02098967134952545
+Fold [3/3], Epoch [53/50] - Loss: 0.020572627584139507
+Fold [3/3], Epoch [54/50] - Loss: 0.01956339677174886
+Fold [3/3], Epoch [55/50] - Loss: 0.019663716355959576
+Fold [3/3], Epoch [56/50] - Loss: 0.018592952026261225
+Fold [3/3], Epoch [57/50] - Loss: 0.018170265687836543
+Fold [3/3], Epoch [58/50] - Loss: 0.018029817276530795
+Fold [3/3], Epoch [59/50] - Loss: 0.017824591861830816
+Fold [3/3], Epoch [60/50] - Loss: 0.017441150214936998
+Fold [3/3] - Average Dice Coef: 0.938813328742981, Average TPR: 0.9506580829620361, Average FPR: 0.0099694998934865, Average Hausdorff: 90.80212204147914
+Fold [3/3] - Average Dice Coef: 0.938813328742981, Average TPR: 0.9679136872291565, Average FPR: 0.0009320264216512442, Average Hausdorff: 24.259395688741904
+Fold [3/3], Epoch [61/50] - Loss: 0.017432125078307256
+Fold [3/3], Epoch [62/50] - Loss: 0.01735715733634101
+Fold [3/3], Epoch [63/50] - Loss: 0.017080614964167278
+Fold [3/3], Epoch [64/50] - Loss: 0.01691235105196635
+Fold [3/3], Epoch [65/50] - Loss: 0.016915298170513578
+Fold [3/3], Epoch [66/50] - Loss: 0.016174700525071885
+Fold [3/3], Epoch [67/50] - Loss: 0.016114734941058688
+Fold [3/3], Epoch [68/50] - Loss: 0.015427259935273064
+Fold [3/3], Epoch [69/50] - Loss: 0.01593120727274153
+Fold [3/3], Epoch [70/50] - Loss: 0.015699677997165255
+Fold [3/3] - Average Dice Coef: 0.9379905462265015, Average TPR: 0.9421322345733643, Average FPR: 0.00886153057217598, Average Hausdorff: 94.60883696765822
+Fold [3/3] - Average Dice Coef: 0.9379905462265015, Average TPR: 0.9664004445075989, Average FPR: 0.0008515125373378396, Average Hausdorff: 25.59512595104147
+Fold [3/3], Epoch [71/50] - Loss: 0.015024711688359579
+Fold [3/3], Epoch [72/50] - Loss: 0.01570868492126465
+Fold [3/3], Epoch [73/50] - Loss: 0.014628516303168403
+Fold [3/3], Epoch [74/50] - Loss: 0.014695169197188484
+Fold [3/3], Epoch [75/50] - Loss: 0.014580733246273465
+Fold [3/3], Epoch [76/50] - Loss: 0.014416898290316263
+Fold [3/3], Epoch [77/50] - Loss: 0.014026393493016561
+Fold [3/3], Epoch [78/50] - Loss: 0.014283769660525851
+Fold [3/3], Epoch [79/50] - Loss: 0.014084219932556152
+Fold [3/3], Epoch [80/50] - Loss: 0.01429179310798645
+Fold [3/3] - Average Dice Coef: 0.9373075366020203, Average TPR: 0.9406596422195435, Average FPR: 0.008834853768348694, Average Hausdorff: 96.23676481274599
+Fold [3/3] - Average Dice Coef: 0.9373075366020203, Average TPR: 0.9672422409057617, Average FPR: 0.0009033222449943423, Average Hausdorff: 38.27699108090663
+Fold [3/3], Epoch [81/50] - Loss: 0.013978277643521627
+Fold [3/3], Epoch [82/50] - Loss: 0.013300216860241361
+Fold [3/3], Epoch [83/50] - Loss: 0.013254533211390177
+Fold [3/3], Epoch [84/50] - Loss: 0.013669563664330376
+Fold [3/3], Epoch [85/50] - Loss: 0.013155723611513773
+Fold [3/3], Epoch [86/50] - Loss: 0.01308597293164995
+Fold [3/3], Epoch [87/50] - Loss: 0.013371038768026564
+Fold [3/3], Epoch [88/50] - Loss: 0.012947842478752136
+Fold [3/3], Epoch [89/50] - Loss: 0.013133948047955831
+Fold [3/3], Epoch [90/50] - Loss: 0.012811336252424452
+Fold [3/3] - Average Dice Coef: 0.9409332275390625, Average TPR: 0.9494285583496094, Average FPR: 0.009181725792586803, Average Hausdorff: 125.69473577739515
+Fold [3/3] - Average Dice Coef: 0.9409332275390625, Average TPR: 0.964691698551178, Average FPR: 0.00080867885844782, Average Hausdorff: 38.04072201630097
+Fold [3/3], Epoch [91/50] - Loss: 0.012465763423177931
+Fold [3/3], Epoch [92/50] - Loss: 0.012809861037466262
+Fold [3/3], Epoch [93/50] - Loss: 0.013355872697300382
+Fold [3/3], Epoch [94/50] - Loss: 0.012381368213229708
+Fold [3/3], Epoch [95/50] - Loss: 0.012581260667906867
+Fold [3/3], Epoch [96/50] - Loss: 0.012340057227346633
+Fold [3/3], Epoch [97/50] - Loss: 0.012799744804700216
+Fold [3/3], Epoch [98/50] - Loss: 0.012784298923280504
+Fold [3/3], Epoch [99/50] - Loss: 0.012308326032426622
+Fold [3/3], Epoch [100/50] - Loss: 0.012101289298799302
+Fold [3/3] - Average Dice Coef: 0.9404811263084412, Average TPR: 0.9473397135734558, Average FPR: 0.009002472274005413, Average Hausdorff: 111.39534915887745
+Fold [3/3] - Average Dice Coef: 0.9404811263084412, Average TPR: 0.9678916931152344, Average FPR: 0.0009099739836528897, Average Hausdorff: 60.46898613679451
+Model saved at ./model_fold_3_continued.pth
+Fold [3/3] - Average Dice Coef: 0.9404817819595337, Average TPR: 0.9473403692245483, Average FPR: 0.009002379141747952, Average Hausdorff: 111.39319108625091
+Fold [3/3] - Average Dice Coef: 0.9404817819595337, Average TPR: 0.9678923487663269, Average FPR: 0.0009099739836528897, Average Hausdorff: 60.4689861367945
+
+Prediction time for batch 0 with batch size 4: 0.09335112571716309 seconds
+Prediction time for batch 1 with batch size 4: 0.08713650703430176 seconds
+Prediction time for batch 2 with batch size 4: 0.11528801918029785 seconds
+Prediction time for batch 3 with batch size 4: 0.10626649856567383 seconds
+Prediction time for batch 4 with batch size 4: 0.09590435028076172 seconds
+Average Dice Coef: nan, Average TPR: nan, Average FPR: nan, Average Hausdorff Distance: nan, Average Prediction Time: 0.02489732503890991
