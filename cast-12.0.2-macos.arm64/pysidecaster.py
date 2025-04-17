@@ -168,17 +168,18 @@ class ImageView(QtWidgets.QGraphicsView):
         qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
         return qimage
 
-    def qimage_to_numpy(self, img: QtGui.QImage):
+    def qimage_to_numpy(self, image: QtGui.QImage):
         """
         Convert a QImage to a NumPy array.
         """
-        img_grey = img.convertToFormat(QtGui.QImage.Format_Indexed8)
-        #img_str = img_p.constBits().(img_p.byteCount())
-        print(img_grey.format().name, img_grey.format().value)
-        ptr = img_grey.constBits()
-        ptr.setsize(img.height() * img.width() * 1)
-        #img_np = np.frombuffer(img_str, dtype=np.uint8).reshape((img_p.height(), img_p.width(), 3))
-        return np.array(ptr).reshape(img.height(), img.width(), 1)
+        image = image.convertToFormat(QtGui.QImage.Format_Grayscale8)
+        width = image.width()
+        height = image.height()
+
+        ptr = image.bits()
+        arr = np.frombuffer(ptr, dtype=np.uint8, count=height * image.bytesPerLine())
+        arr = arr.reshape((height, image.bytesPerLine()))
+        return arr[:, :width]
 
 
 # main widget with controls and ui
