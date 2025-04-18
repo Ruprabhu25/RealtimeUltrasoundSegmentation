@@ -91,6 +91,7 @@ class ScannerWindow(Qt3DExtras.Qt3DWindow):
         self.qx = qx
         self.qy = qy
         self.qz = qz
+        print(qw, qx, qy, qz)
         self.addTransform()
 
     def addTransform(self):
@@ -219,6 +220,8 @@ def newProcessedImage(image, width, height, bpp, micronsPerPixel, timestamp, ang
         signaller.qz = imu[0].qz
         evt = ImageEvent()
         QtCore.QCoreApplication.postEvent(signaller, evt)
+        print(imu)
+        print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz)
     return
 
 

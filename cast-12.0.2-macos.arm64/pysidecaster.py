@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ctypes
+import datetime
 import os.path
 import sys
 from pathlib import Path
@@ -21,6 +22,8 @@ if sys.platform.startswith("linux"):
 import pyclariuscast
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt, Signal, Slot
+import time
+import pandas as pd
 
 CMD_FREEZE: Final = 1
 CMD_CAPTURE_IMAGE: Final = 2
@@ -32,6 +35,9 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
+frame_num = 0
+quaternions = pd.DataFrame()
+#quaternions.
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
@@ -89,8 +95,8 @@ class ImageView(QtWidgets.QGraphicsView):
 
     # set the new image and redraw
     def updateImage(self, img):
-        segmented_img = self.segment_image(img)
-        #segmented_img = img
+        #segmented_img = self.segment_image(img)
+        segmented_img = img
         self.image = segmented_img
         self.scene().invalidate()
 
@@ -214,6 +220,7 @@ class MainWidget(QtWidgets.QMainWindow):
 
         # try to connect/disconnect to/from the probe
         def tryConnect():
+            frame_num = 0
             if not cast.isConnected():
                 if cast.connect(ip.text(), int(port.text()), "research"):
                     self.statusBar().showMessage("Connected")
@@ -385,8 +392,10 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     signaller.usimage = img.copy()
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
-    print('here')
-    img.save("./processed_image.png")
+    print(imu[0].qw + "," + imu[0].qx + "," + imu[0].qy + "," + imu[0].qz + "\n")
+    with open(f"./positions/quaternion_run_{datetime.datetime.now}.txt") as f_pos:
+        f_pos.write(imu[0].qw + "," + imu[0].qx + "," + imu[0].qy + "," + imu[0].qz + "\n")
+    #img.save(f"./frames/frames_run_{datetime.datetime.now}_{frame_num}")
     return
 
 
