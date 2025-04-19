@@ -24,6 +24,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt, Signal, Slot
 import time
 import pandas as pd
+import os
 
 CMD_FREEZE: Final = 1
 CMD_CAPTURE_IMAGE: Final = 2
@@ -36,8 +37,9 @@ CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
 frame_num = 0
-quaternions = pd.DataFrame()
-#quaternions.
+quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
+time_run = datetime.datetime.now()
+os.mkdir(f"./images/{time_run}")
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
@@ -123,6 +125,12 @@ class ImageView(QtWidgets.QGraphicsView):
             painter.drawImage(rect, self.image)
 
     def segment_image(self, img):
+        '''try:
+            global frame_num
+            img.save(f"./image/{timestamp}/{frame_num}.png")
+            frame_num += 1
+        except Exception as e:
+            print(e)'''
         img_np = self.qimage_to_numpy(img)
         original_height, original_width = img_np.shape[:2]  # Get the original image size
         
@@ -220,7 +228,11 @@ class MainWidget(QtWidgets.QMainWindow):
 
         # try to connect/disconnect to/from the probe
         def tryConnect():
-            frame_num = 0
+            try: 
+                global frame_num
+                frame_num = 0
+            except Exception as e:
+                print(e)
             if not cast.isConnected():
                 if cast.connect(ip.text(), int(port.text()), "research"):
                     self.statusBar().showMessage("Connected")
@@ -370,6 +382,7 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
+        quaternions.to_csv(f"./positions/quaternion_run_{time_run}.csv")
         QtWidgets.QApplication.quit()
 
 
@@ -388,14 +401,32 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
         img = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
     else:
         img = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
+
+    if bpp == 4:
+        img_save = Image.frombytes("RGBA", (width, height), image)
+    else:
+        img_save = Image.frombytes("L", (width, height), image)
     # a deep copy is important here, as the memory from 'image' won't be valid after the event posting
     signaller.usimage = img.copy()
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
-    print(imu[0].qw + "," + imu[0].qx + "," + imu[0].qy + "," + imu[0].qz + "\n")
-    with open(f"./positions/quaternion_run_{datetime.datetime.now}.txt") as f_pos:
-        f_pos.write(imu[0].qw + "," + imu[0].qx + "," + imu[0].qy + "," + imu[0].qz + "\n")
-    #img.save(f"./frames/frames_run_{datetime.datetime.now}_{frame_num}")
+    try:
+        global quaternions
+        global time_run
+        global frame_num
+        new_row = pd.DataFrame([
+            {'qw': imu[0].qw, 'qx': imu[0].qx, 'qy': imu[0].qy, 'qz': imu[0].qz}
+        ])
+        quaternions = pd.concat(
+            [quaternions, 
+            new_row]
+        )
+        print(f"saving {frame_num}")
+        img_save.save(f"./images/{time_run}/{frame_num}.png")
+        print(f"saved {frame_num}")
+        frame_num += 1
+    except Exception as e:
+        print(e)
     return
 
 

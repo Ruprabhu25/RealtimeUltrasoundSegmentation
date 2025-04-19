@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ctypes
+import datetime
 import os.path
 import sys
 
@@ -15,6 +16,9 @@ from PySide6.Qt3DExtras import Qt3DExtras
 from PySide6.Qt3DRender import Qt3DRender
 from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QQuaternion, QVector3D
+import pandas as pd
+
+quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
 
 
 # custom event for handling change in freeze state
@@ -91,7 +95,7 @@ class ScannerWindow(Qt3DExtras.Qt3DWindow):
         self.qx = qx
         self.qy = qy
         self.qz = qz
-        print(qw, qx, qy, qz)
+        #print(qw, qx, qy, qz)
         self.addTransform()
 
     def addTransform(self):
@@ -200,6 +204,8 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
+        global quaternions
+        quaternions.to_csv(f"./positions/quaternion_run_{datetime.datetime.now()}.csv")
         QtWidgets.QApplication.quit()
 
 
@@ -220,8 +226,19 @@ def newProcessedImage(image, width, height, bpp, micronsPerPixel, timestamp, ang
         signaller.qz = imu[0].qz
         evt = ImageEvent()
         QtCore.QCoreApplication.postEvent(signaller, evt)
-        print(imu)
-        print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz)
+        #print(imu)
+        try:
+            global quaternions
+            new_row = pd.DataFrame([
+                {'qw': imu[0].qw, 'qx': imu[0].qx, 'qy': imu[0].qy, 'qz': imu[0].qz}
+            ])
+            #print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz)
+            quaternions = pd.concat(
+                [quaternions, 
+                new_row]
+            )
+        except Exception as e:
+            print(e)
     return
 
 
