@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ctypes
+import datetime
 import os.path
 import sys
 from pathlib import Path
@@ -10,7 +11,7 @@ from torchvision import transforms
 import torch
 import numpy as np
 # sys.path.append("C:\\Users\\Junfei\\Desktop\\Repos\\RealtimeUltrasoundSegmentation")
-# from Efficientunet.efficientunet import get_efficientunet_b0
+#from Efficientunet.efficientunet import get_efficientunet_b0
 from efficientunet import get_efficientunet_b0
 from skimage.transform import resize
 
@@ -21,6 +22,9 @@ if sys.platform.startswith("linux"):
 import pyclariuscast
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt, Signal, Slot
+import time
+import pandas as pd
+import os
 
 CMD_FREEZE: Final = 1
 CMD_CAPTURE_IMAGE: Final = 2
@@ -32,6 +36,10 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
+frame_num = 0
+quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
+time_run = datetime.datetime.now()
+os.mkdir(f"./images/{time_run}")
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
@@ -89,7 +97,8 @@ class ImageView(QtWidgets.QGraphicsView):
 
     # set the new image and redraw
     def updateImage(self, img):
-        segmented_img = self.segment_image(img)
+        #segmented_img = self.segment_image(img)
+        segmented_img = img
         self.image = segmented_img
         self.scene().invalidate()
 
@@ -116,6 +125,12 @@ class ImageView(QtWidgets.QGraphicsView):
             painter.drawImage(rect, self.image)
 
     def segment_image(self, img):
+        '''try:
+            global frame_num
+            img.save(f"./image/{timestamp}/{frame_num}.png")
+            frame_num += 1
+        except Exception as e:
+            print(e)'''
         img_np = self.qimage_to_numpy(img)
         original_height, original_width = img_np.shape[:2]  # Get the original image size
         
@@ -167,14 +182,18 @@ class ImageView(QtWidgets.QGraphicsView):
         qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
         return qimage
 
-    def qimage_to_numpy(self, img):
+    def qimage_to_numpy(self, image: QtGui.QImage):
         """
         Convert a QImage to a NumPy array.
         """
-        img_p = img.convertToFormat(QtGui.QImage.Format_RGB888)
-        img_str = img_p.bits().asstring(img_p.byteCount())
-        img_np = np.frombuffer(img_str, dtype=np.uint8).reshape((img_p.height(), img_p.width(), 3))
-        return img_np
+        image = image.convertToFormat(QtGui.QImage.Format_Grayscale8)
+        width = image.width()
+        height = image.height()
+
+        ptr = image.bits()
+        arr = np.frombuffer(ptr, dtype=np.uint8, count=height * image.bytesPerLine())
+        arr = arr.reshape((height, image.bytesPerLine()))
+        return arr[:, :width]
 
 
 # main widget with controls and ui
@@ -209,6 +228,11 @@ class MainWidget(QtWidgets.QMainWindow):
 
         # try to connect/disconnect to/from the probe
         def tryConnect():
+            try: 
+                global frame_num
+                frame_num = 0
+            except Exception as e:
+                print(e)
             if not cast.isConnected():
                 if cast.connect(ip.text(), int(port.text()), "research"):
                     self.statusBar().showMessage("Connected")
@@ -358,6 +382,7 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
+        quaternions.to_csv(f"./positions/quaternion_run_{time_run}.csv")
         QtWidgets.QApplication.quit()
 
 
@@ -376,12 +401,32 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
         img = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
     else:
         img = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
+
+    if bpp == 4:
+        img_save = Image.frombytes("RGBA", (width, height), image)
+    else:
+        img_save = Image.frombytes("L", (width, height), image)
     # a deep copy is important here, as the memory from 'image' won't be valid after the event posting
     signaller.usimage = img.copy()
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
-    print('here')
-    img.save("./processed_image.png")
+    try:
+        global quaternions
+        global time_run
+        global frame_num
+        new_row = pd.DataFrame([
+            {'qw': imu[0].qw, 'qx': imu[0].qx, 'qy': imu[0].qy, 'qz': imu[0].qz}
+        ])
+        quaternions = pd.concat(
+            [quaternions, 
+            new_row]
+        )
+        print(f"saving {frame_num}")
+        img_save.save(f"./images/{time_run}/{frame_num}.png")
+        print(f"saved {frame_num}")
+        frame_num += 1
+    except Exception as e:
+        print(e)
     return
 
 
@@ -443,7 +488,7 @@ def main():
     device = 'cpu'
     model = get_efficientunet_b0(out_channels=1, concat_input=False, pretrained=False).to(device)
     # TODO: add model and update path
-    model.load_state_dict(torch.load('./EfficientUNet.pth')) 
+    #model.load_state_dict(torch.load('./EfficientUNet.pth')) 
     widget = MainWidget(cast, model, device)
     widget.resize(640, 480)
     widget.show()

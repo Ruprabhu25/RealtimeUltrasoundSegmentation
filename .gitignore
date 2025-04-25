@@ -1,0 +1,7 @@
+*.pth
+*.pyc
+*.iso
+**/__pycache__
+**/images/
+**/positions/
+**/.DS_Store
