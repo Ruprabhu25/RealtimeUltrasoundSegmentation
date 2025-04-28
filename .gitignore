@@ -4,5 +4,5 @@
 *.iso
 **/__pycache__
 **/images/
-**/positions/
+# **/positions/
 **/.DS_Store
