@@ -89,6 +89,7 @@ class MainWidget(QtWidgets.QMainWindow):
         self.index = 0
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateRotation)
+        self.timer.singleShot(20, self.updateCaption)
 
     def load_file(self):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open Quaternion File", "", "CSV Files (*.csv *.txt)")
@@ -98,7 +99,7 @@ class MainWidget(QtWidgets.QMainWindow):
         self.quaternions = self.load_quaternions_from_csv(file_path)
         if len(self.quaternions) > 0:
             self.index = 0
-            self.timer.start(50)  # 20 FPS animation
+            self.timer.start(1000 / 35)  # 20 FPS animation
 
     def load_quaternions_from_csv(self, path):
         quats = []
