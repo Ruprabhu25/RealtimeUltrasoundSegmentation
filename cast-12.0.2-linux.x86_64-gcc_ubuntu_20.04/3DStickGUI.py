@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 import csv
+import time
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import QUrl
@@ -117,6 +118,7 @@ class MainWidget(QtWidgets.QMainWindow):
     def updateRotation(self):
         if self.index >= len(self.quaternions):
             self.timer.stop()
+            sys.exit(0)
             return
 
         q = self.quaternions[self.index]
