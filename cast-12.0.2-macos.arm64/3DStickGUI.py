@@ -47,7 +47,7 @@ class ScannerWindow(Qt3DExtras.Qt3DWindow):
         
         # Load scanner.obj
         self.scanner = Qt3DRender.QSceneLoader(self.scannerEntity)
-        self.scanner.setSource(QUrl.fromLocalFile("scanner.obj"))
+        self.scanner.setSource(QUrl.fromLocalFile("probeWSurface.obj"))
         self.scannerEntity.addComponent(self.scanner)
 
         self.scannerTransform = Qt3DCore.QTransform()
