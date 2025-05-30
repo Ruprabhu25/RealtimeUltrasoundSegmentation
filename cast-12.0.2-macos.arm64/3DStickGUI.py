@@ -47,7 +47,7 @@ class ScannerWindow(Qt3DExtras.Qt3DWindow):
         
         # Load scanner.obj
         self.scanner = Qt3DRender.QSceneLoader(self.scannerEntity)
-        self.scanner.setSource(QUrl.fromLocalFile("scanner.obj"))
+        self.scanner.setSource(QUrl.fromLocalFile("probeWSurface.obj"))
         self.scannerEntity.addComponent(self.scanner)
 
         self.scannerTransform = Qt3DCore.QTransform()
@@ -98,7 +98,9 @@ class MainWidget(QtWidgets.QMainWindow):
         self.quaternions = self.load_quaternions_from_csv(file_path)
         if len(self.quaternions) > 0:
             self.index = 0
-            self.timer.start(50)  # 20 FPS animation
+            # self.timer.start(50)  # 20 FPS animation
+            interval = int((30.0 / 1350) * 1000)
+            self.timer.start(interval)
 
     def load_quaternions_from_csv(self, path):
         quats = []

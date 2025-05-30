@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 import csv
+import time
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import QUrl
@@ -15,6 +16,11 @@ from PySide6.Qt3DRender import Qt3DRender
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
+
+import math
+import numpy as np
+from PySide6.QtGui import QColor, QVector3D
+
 
 def quaternion_to_rotation_matrix(q):
     w, x, y, z = q
@@ -117,11 +123,16 @@ class MainWidget(QtWidgets.QMainWindow):
     def updateRotation(self):
         if self.index >= len(self.quaternions):
             self.timer.stop()
+            sys.exit(0)
             return
 
         q = self.quaternions[self.index]
         self.scanner.updateAngle(q[0], q[1], q[2], q[3])
         self.index += 1
+
+    def updateCaption(self):
+        # Update the window title or caption if necessary; currently a placeholder.
+        pass
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
