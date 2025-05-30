@@ -17,6 +17,11 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 
+import math
+import numpy as np
+from PySide6.QtGui import QColor, QVector3D
+
+
 def quaternion_to_rotation_matrix(q):
     w, x, y, z = q
     return np.array([
@@ -124,6 +129,10 @@ class MainWidget(QtWidgets.QMainWindow):
         q = self.quaternions[self.index]
         self.scanner.updateAngle(q[0], q[1], q[2], q[3])
         self.index += 1
+
+    def updateCaption(self):
+        # Update the window title or caption if necessary; currently a placeholder.
+        pass
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
