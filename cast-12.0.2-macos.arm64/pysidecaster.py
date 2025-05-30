@@ -39,7 +39,7 @@ CMD_CFI_MODE: Final = 14
 frame_num = 0
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
 time_run = datetime.datetime.now()
-os.mkdir(f"./images/{time_run}")
+os.makedirs(f"./images/{time_run}")
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
