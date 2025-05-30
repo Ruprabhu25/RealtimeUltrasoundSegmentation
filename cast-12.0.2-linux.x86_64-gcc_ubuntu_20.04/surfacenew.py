@@ -44,7 +44,7 @@ QPointLight        = Qt3DRender.Qt3DRender.QPointLight
 SCANNER_SCALE    = 100.0   # uniform scale applied to everything
 MODEL_NEAR_W     = 0.02    # width of fan at the probe face (model‐units)
 MODEL_DEPTH      = 0.10    # how far it goes (model‐units)
-MODEL_TIP_OFFSET = 0.1    # where the mesh’s tip lives (model‐units)
+MODEL_TIP_OFFSET = 0.07    # where the mesh’s tip lives (model‐units)
 # ─────────────────────────────────────────────────────────────────────────
 
 
