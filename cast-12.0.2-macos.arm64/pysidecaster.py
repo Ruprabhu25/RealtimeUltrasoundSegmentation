@@ -410,23 +410,24 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     signaller.usimage = img.copy()
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
-    try:
-        global quaternions
-        global time_run
-        global frame_num
-        new_row = pd.DataFrame([
-            {'qw': imu[0].qw, 'qx': imu[0].qx, 'qy': imu[0].qy, 'qz': imu[0].qz}
-        ])
-        quaternions = pd.concat(
-            [quaternions, 
-            new_row]
-        )
-        print(f"saving {frame_num}")
-        img_save.save(f"./images/{time_run}/{frame_num}.png")
-        print(f"saved {frame_num}")
-        frame_num += 1
-    except Exception as e:
-        print(e)
+    print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz)
+    # try:
+    #     global quaternions
+    #     global time_run
+    #     global frame_num
+    #     new_row = pd.DataFrame([
+    #         {'qw': imu[0].qw, 'qx': imu[0].qx, 'qy': imu[0].qy, 'qz': imu[0].qz}
+    #     ])
+    #     quaternions = pd.concat(
+    #         [quaternions, 
+    #         new_row]
+    #     )
+    #     print(f"saving {frame_num}")
+    #     img_save.save(f"./images/{time_run}/{frame_num}.png")
+    #     print(f"saved {frame_num}")
+    #     frame_num += 1
+    # except Exception as e:
+    #     print(e)
     return
 
 

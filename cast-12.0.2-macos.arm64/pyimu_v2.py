@@ -22,11 +22,11 @@ from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QQuaternion, QVector3D
 import pandas as pd
 
-# from PyQt5 import Qt3DCore, Qt3DRender, Qt3DExtras, QtGui, QtCore
-# from PyQt5.QtGui import QQuaternion, QVector3D, QImage
-# from PyQt5.Qt3DExtras import QPlaneMesh, QTextureMaterial
-# from PyQt5.Qt3DRender import QTexture2D, QTextureImage
-# from PyQt5.QtCore import QUrl
+from PyQt5 import Qt3DCore, Qt3DRender, Qt3DExtras, QtGui, QtCore
+from PyQt5.QtGui import QQuaternion, QVector3D, QImage
+from PyQt5.Qt3DExtras import QPlaneMesh, QTextureMaterial
+from PyQt5.Qt3DRender import QTexture2D, QTextureImage
+from PyQt5.QtCore import QUrl
 
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
 
