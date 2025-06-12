@@ -438,12 +438,15 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
             pred = pred.squeeze(0).numpy()
         # Normalize and convert to torch
         #img_tensor = torch.from_numpy(img_resized.astype(np.float32) / 255.0).unsqueeze(0)
-
-        pred_img = Image.fromarray(pred.reshape(128, 128))
+        print(pred.shape)
+        print(np.max(pred), np.min(pred))
+        print(np.max(pred.squeeze().astype(np.uint8)), np.min(pred.squeeze().astype(np.uint8)))
+        pred_img = Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
+        
         pred_img.save(f"./cast-12.0.2-macos.arm64/images/test.png")
         # Convert resized image back to QImage
         img_qt_resized = QtGui.QImage(
-            pred.astype(np.uint8).copy(), 
+            (pred * 255).astype(np.uint8).copy(), 
             image_size[1], 
             image_size[0], 
             image_size[1],  # bytesPerLine for grayscale: width * 1
