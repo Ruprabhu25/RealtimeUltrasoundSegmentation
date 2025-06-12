@@ -41,10 +41,10 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
-# frame_num = 0
-# quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
-# time_run = datetime.datetime.now()
-# os.makedirs(f"./images/{time_run}")
+frame_num = 0
+quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
+time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+os.makedirs(f"./images/{time_run}")
 
 device = 'cpu'
 model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(device)
@@ -390,7 +390,7 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
-        quaternions.to_csv(f"./positions/quaternion_run_{time_run}.csv")
+        quaternions.to_csv(f"./cast-12.0.2-macos.arm64/positions/quaternion_run_{time_run}.csv")
         QtWidgets.QApplication.quit()
 
 
@@ -434,17 +434,32 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
         # 6/12/25 try to use model
         with torch.no_grad():
             _, pred = model(img_resized)
-            print(pred.shape)
             pred = pred.squeeze(0).numpy()
         # Normalize and convert to torch
         #img_tensor = torch.from_numpy(img_resized.astype(np.float32) / 255.0).unsqueeze(0)
-        print(pred.shape)
-        print(np.max(pred), np.min(pred))
-        print(np.max(pred.squeeze().astype(np.uint8)), np.min(pred.squeeze().astype(np.uint8)))
         pred_img = Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
         
         pred_img.save(f"./cast-12.0.2-macos.arm64/images/test.png")
-        # Convert resized image back to QImage
+        try:
+            global quaternions
+            global time_run
+            global frame_num
+            print("acquire imu data")
+            new_row = pd.DataFrame([
+                {'qw': imu[0].qw, 'qx': imu[0].qx, 'qy': imu[0].qy, 'qz': imu[0].qz}
+            ])
+            print("add to pd dataframe")
+            quaternions = pd.concat(
+                [quaternions, 
+                new_row]
+            )
+            print(f"saving {frame_num}")
+            pred_img.save(f"./images/{time_run}/{frame_num}.png")
+            print(f"saved {frame_num}")
+            frame_num += 1
+        except Exception as e:
+            print(e)
+        
         img_qt_resized = QtGui.QImage(
             (pred * 255).astype(np.uint8).copy(), 
             image_size[1], 
