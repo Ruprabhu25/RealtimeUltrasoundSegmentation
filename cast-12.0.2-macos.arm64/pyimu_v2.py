@@ -5,6 +5,10 @@ import datetime
 import os.path
 import sys
 
+import numpy as np
+import numpy.typing as npt
+from PIL import Image
+
 if sys.platform.startswith("linux"):
     libcast_handle = ctypes.CDLL("./libcast.so", ctypes.RTLD_GLOBAL)._handle  # load the libcast.so shared library
     pyclariuscast = ctypes.cdll.LoadLibrary("./pyclariuscast.so")  # load the pyclariuscast.so shared library
@@ -17,6 +21,12 @@ from PySide6.Qt3DRender import Qt3DRender
 from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QQuaternion, QVector3D
 import pandas as pd
+
+from PyQt5 import Qt3DCore, Qt3DRender, Qt3DExtras, QtGui, QtCore
+from PyQt5.QtGui import QQuaternion, QVector3D, QImage
+from PyQt5.Qt3DExtras import QPlaneMesh, QTextureMaterial
+from PyQt5.Qt3DRender import QTexture2D, QTextureImage
+from PyQt5.QtCore import QUrl
 
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
 
@@ -46,7 +56,8 @@ class ImageEvent(QtCore.QEvent):
 class Signaller(QtCore.QObject):
     freeze = QtCore.Signal(bool)
     button = QtCore.Signal(int, int)
-    image = QtCore.Signal(float, float, float, float)
+    # signal with image and quaternion data #TODO: fix
+    image = QtCore.Signal(QtGui.QImage, float, float, float, float)
     qw = 0
     qx = 0
     qy = 0
@@ -54,7 +65,7 @@ class Signaller(QtCore.QObject):
 
     def __init__(self):
         QtCore.QObject.__init__(self)
-        self.usimage = QtGui.QImage()
+        self.usimage = QtGui.QImage()  # placeholder for the image data
 
     def event(self, evt):
         if evt.type() == QtCore.QEvent.User:
@@ -62,15 +73,13 @@ class Signaller(QtCore.QObject):
         elif evt.type() == QtCore.QEvent.Type(QtCore.QEvent.User + 1):
             self.button.emit(evt.btn, evt.clicks)
         elif evt.type() == QtCore.QEvent.Type(QtCore.QEvent.User + 2):
-            self.image.emit(self.qw, self.qx, self.qy, self.qz)
+            self.image.emit(self.usimage, self.qw, self.qx, self.qy, self.qz)
         return True
 
 
 # global required for the listen api callbacks
 signaller = Signaller()
 
-
-# 3d render class
 class ScannerWindow(Qt3DExtras.Qt3DWindow):
     qw = 0.5
     qx = 0.5
@@ -90,13 +99,14 @@ class ScannerWindow(Qt3DExtras.Qt3DWindow):
         self.createScene()
         self.setRootEntity(self.rootEntity)
 
-    def updateAngle(self, qw, qx, qy, qz):
+    def updateAngle(self, image: QtGui.QImage, qw: float, qx: float, qy: float, qz: float):
         self.qw = qw
         self.qx = qx
         self.qy = qy
         self.qz = qz
-        #print(qw, qx, qy, qz)
+        self.image = image
         self.addTransform()
+        self.addImagePlane()  # add the textured image plane
 
     def addTransform(self):
         # correct orientation
@@ -109,12 +119,42 @@ class ScannerWindow(Qt3DExtras.Qt3DWindow):
         self.scannerTransform.setRotation(self.correctedOrientation)
         self.scannerEntity.addComponent(self.scannerTransform)
 
+    def addImagePlane(self):
+        # Create entity
+        imagePlaneEntity = Qt3DCore.QEntity(self.rootEntity)
+
+        # Mesh
+        planeMesh = QPlaneMesh()
+        planeMesh.setWidth(10)
+        planeMesh.setHeight(10)
+
+        # Texture from QImage
+        texture = QTexture2D()
+        textureImage = QTextureImage()
+        textureImage.setImage(self.image)
+        texture.addTextureImage(textureImage)
+
+        material = QTextureMaterial()
+        material.setTexture(texture)
+
+        # Compute position 10 units in front of scanner's facing direction
+        forward = self.correctedOrientation.rotatedVector(QVector3D(0, 0, 1))
+        position = forward.normalized() * 10
+
+        planeTransform = Qt3DCore.QTransform()
+        planeTransform.setTranslation(position)
+        planeTransform.setRotation(self.correctedOrientation)
+
+        # Add components
+        imagePlaneEntity.addComponent(planeMesh)
+        imagePlaneEntity.addComponent(material)
+        imagePlaneEntity.addComponent(planeTransform)
+
     def createScene(self):
         self.rootEntity = Qt3DCore.QEntity()
         self.scannerEntity = Qt3DCore.QEntity(self.rootEntity)
-        # QSceneLoader loads materials from scanner.mtl referenced in scanner.obj
         self.scanner = Qt3DRender.QSceneLoader(self.scannerEntity)
-        self.scanner.setSource(QUrl.fromLocalFile("scanner.obj"))
+        self.scanner.setSource(QUrl.fromLocalFile("probeWSurface.obj"))
         self.scannerEntity.addComponent(self.scanner)
         self.addTransform()
 
@@ -193,9 +233,9 @@ class MainWidget(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Button {0} pressed w/ {1} clicks".format(btn, clicks))
 
     # handles new images
-    @Slot(float, float, float, float)
-    def image(self, qw, qx, qy, qz):
-        self.scanner.updateAngle(qw, qx, qy, qz)
+    @Slot(QtGui.QImage, float, float, float, float)
+    def image(self, image, qw, qx, qy, qz):
+        self.scanner.updateAngle(image, qw, qx, qy, qz)
 
     # handles shutdown
     @Slot()
@@ -204,8 +244,8 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
-        global quaternions
-        quaternions.to_csv(f"./positions/quaternion_run_{datetime.datetime.now()}.csv")
+        # global quaternions
+        # quaternions.to_csv(f"./positions/quaternion_run_{datetime.datetime.now()}.csv")
         QtWidgets.QApplication.quit()
 
 
@@ -224,10 +264,19 @@ def newProcessedImage(image, width, height, bpp, micronsPerPixel, timestamp, ang
         signaller.qx = imu[0].qx
         signaller.qy = imu[0].qy
         signaller.qz = imu[0].qz
+        if bpp == 4:
+            img = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
+        else:
+            img = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
+        # if bpp == 4:
+        #     img = Image.frombytes("RGBA", (width, height), image)
+        # else:
+        #     img = Image.frombytes("L", (width, height), image)
+        # img_render = np.array(img)
+        signaller.usimage = img 
         evt = ImageEvent()
         QtCore.QCoreApplication.postEvent(signaller, evt)
-        print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz )
-        #print(imu)
+        # #print(imu)
         # try:
         #     global quaternions
         #     new_row = pd.DataFrame([
