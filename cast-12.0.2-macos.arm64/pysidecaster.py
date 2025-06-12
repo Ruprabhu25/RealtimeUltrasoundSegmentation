@@ -12,8 +12,9 @@ import torch
 import numpy as np
 # sys.path.append("C:\\Users\\Junfei\\Desktop\\Repos\\RealtimeUltrasoundSegmentation")
 #from Efficientunet.efficientunet import get_efficientunet_b0
-from efficientunet import get_efficientunet_b0
 from skimage.transform import resize
+from us_unet2 import MultiHeadUNet, UNet
+import cv2
 
 if sys.platform.startswith("linux"):
     libcast_handle = ctypes.CDLL("./libcast.so", ctypes.RTLD_GLOBAL)._handle  # load the libcast.so shared library
@@ -25,6 +26,9 @@ from PySide6.QtCore import Qt, Signal, Slot
 import time
 import pandas as pd
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 CMD_FREEZE: Final = 1
 CMD_CAPTURE_IMAGE: Final = 2
@@ -36,10 +40,15 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
-frame_num = 0
-quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
-time_run = datetime.datetime.now()
-os.makedirs(f"./images/{time_run}")
+# frame_num = 0
+# quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
+# time_run = datetime.datetime.now()
+# os.makedirs(f"./images/{time_run}")
+
+device = 'cpu'
+model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(device)
+model.load_state_dict(torch.load(os.getenv("MODEL_PATH"), map_location=device))
+model.eval()
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
@@ -198,7 +207,7 @@ class ImageView(QtWidgets.QGraphicsView):
 
 # main widget with controls and ui
 class MainWidget(QtWidgets.QMainWindow):
-    def __init__(self, cast, model, device, parent=None):
+    def __init__(self, cast, parent=None):
         QtWidgets.QMainWindow.__init__(self, parent)
 
         self.cast = cast
@@ -397,20 +406,37 @@ class MainWidget(QtWidgets.QMainWindow):
 # @param imu inertial data tagged with the frame
 def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angle, imu):
     bpp = sz / (width * height)
-    if bpp == 4:
-        img = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
-    else:
-        img = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
+    image_size = (128, 128)
 
     if bpp == 4:
-        img_save = Image.frombytes("RGBA", (width, height), image)
+        #img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
+        img_pil = Image.frombytes("RGBA", (width, height), image)
     else:
-        img_save = Image.frombytes("L", (width, height), image)
-    # a deep copy is important here, as the memory from 'image' won't be valid after the event posting
-    signaller.usimage = img.copy()
+        #img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
+        img_pil = Image.frombytes("L", (width, height), image)
+
+    # Resize image using OpenCV
+    img_np = np.array(img_pil)
+    img_resized = cv2.resize(img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA)
+
+    pred = model(img_resized)
+    # Normalize and convert to torch
+    #img_tensor = torch.from_numpy(img_resized.astype(np.float32) / 255.0).unsqueeze(0)
+
+    # Convert resized image back to QImage
+    img_qt_resized = QtGui.QImage(
+        pred.astype(np.uint8).copy(), 
+        image_size[1], 
+        image_size[0], 
+        image_size[1],  # bytesPerLine for grayscale: width * 1
+        QtGui.QImage.Format_Grayscale8
+    )
+
+    signaller.usimage = img_qt_resized  # Clone to detach from NumPy memory
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
-    print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz)
+
+    # print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz)
     # try:
     #     global quaternions
     #     global time_run
@@ -486,11 +512,7 @@ def buttonsFn(button, clicks):
 def main():
     cast = pyclariuscast.Caster(newProcessedImage, newRawImage, newSpectrumImage, newImuData, freezeFn, buttonsFn)
     app = QtWidgets.QApplication(sys.argv)
-    device = 'cpu'
-    model = get_efficientunet_b0(out_channels=1, concat_input=False, pretrained=False).to(device)
-    # TODO: add model and update path
-    #model.load_state_dict(torch.load('./EfficientUNet.pth')) 
-    widget = MainWidget(cast, model, device)
+    widget = MainWidget(cast)
     widget.resize(640, 480)
     widget.show()
     sys.exit(app.exec())
