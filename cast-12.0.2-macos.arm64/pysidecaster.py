@@ -15,6 +15,7 @@ import numpy as np
 from skimage.transform import resize
 from us_unet2 import MultiHeadUNet, UNet
 import cv2
+import matplotlib.pyplot as plt
 
 if sys.platform.startswith("linux"):
     libcast_handle = ctypes.CDLL("./libcast.so", ctypes.RTLD_GLOBAL)._handle  # load the libcast.so shared library
@@ -97,11 +98,9 @@ signaller = Signaller()
 
 # draws the ultrasound image
 class ImageView(QtWidgets.QGraphicsView):
-    def __init__(self, cast, model, device):
+    def __init__(self, cast):
         QtWidgets.QGraphicsView.__init__(self)
         self.cast = cast
-        self.model = model
-        self.device = device
         self.setScene(QtWidgets.QGraphicsScene())
 
     # set the new image and redraw
@@ -219,7 +218,7 @@ class MainWidget(QtWidgets.QMainWindow):
 
         ip = QtWidgets.QLineEdit("192.168.1.1")
         ip.setInputMask("000.000.000.000")
-        port = QtWidgets.QLineEdit("5828")
+        port = QtWidgets.QLineEdit("36035")
         port.setInputMask("00000")
 
         conn = QtWidgets.QPushButton("Connect")
@@ -318,7 +317,7 @@ class MainWidget(QtWidgets.QMainWindow):
         cfiMode.clicked.connect(tryCfiMode)
 
         # add widgets to layout
-        self.img = ImageView(cast, model, device)
+        self.img = ImageView(cast)
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.img)
 
@@ -409,28 +408,50 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     image_size = (128, 128)
 
     if bpp == 4:
-        #img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
+        img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
         img_pil = Image.frombytes("RGBA", (width, height), image)
+        #print("rgb")
     else:
-        #img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
+        img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
         img_pil = Image.frombytes("L", (width, height), image)
+        #print("grayscale")
 
     # Resize image using OpenCV
-    img_np = np.array(img_pil)
-    img_resized = cv2.resize(img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA)
+    try:
+        img_np = np.array(img_pil)
+        img_resized = cv2.resize(img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA)
+        img_resized = img_resized[:, :, :3]
 
-    pred = model(img_resized)
-    # Normalize and convert to torch
-    #img_tensor = torch.from_numpy(img_resized.astype(np.float32) / 255.0).unsqueeze(0)
+    # Apply weights to average RGB
+        img_resized = np.dot(img_resized, [0.299, 0.587, 0.114])
 
-    # Convert resized image back to QImage
-    img_qt_resized = QtGui.QImage(
-        pred.astype(np.uint8).copy(), 
-        image_size[1], 
-        image_size[0], 
-        image_size[1],  # bytesPerLine for grayscale: width * 1
-        QtGui.QImage.Format_Grayscale8
-    )
+        img_resized = img_resized.reshape(128, 128, 1)
+        #print(img_resized.shape)
+        img_resized = torch.from_numpy(img_resized.astype(np.float32)).unsqueeze(0)
+        img_resized = img_resized.permute(0, 3, 1, 2)
+        #print(img_resized.shape)
+
+        # 6/12/25 try to use model
+        with torch.no_grad():
+            _, pred = model(img_resized)
+            print(pred.shape)
+            pred = pred.squeeze(0).numpy()
+        # Normalize and convert to torch
+        #img_tensor = torch.from_numpy(img_resized.astype(np.float32) / 255.0).unsqueeze(0)
+
+        pred_img = Image.fromarray(pred.reshape(128, 128))
+        pred_img.save(f"./cast-12.0.2-macos.arm64/images/test.png")
+        # Convert resized image back to QImage
+        img_qt_resized = QtGui.QImage(
+            pred.astype(np.uint8).copy(), 
+            image_size[1], 
+            image_size[0], 
+            image_size[1],  # bytesPerLine for grayscale: width * 1
+            QtGui.QImage.Format_Grayscale8
+        )
+    except Exception as e:
+        print(e)
+        img_qt_resized = img_qt
 
     signaller.usimage = img_qt_resized  # Clone to detach from NumPy memory
     evt = ImageEvent()
