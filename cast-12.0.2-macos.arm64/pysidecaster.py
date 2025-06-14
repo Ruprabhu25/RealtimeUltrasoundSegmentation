@@ -41,10 +41,13 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
+images_path = os.path.join(os.environ["BASE_DIR"], "images")
+positions_path = os.path.join(os.environ["BASE_DIR"], "positions")
+
 frame_num = 0
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
-time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-os.makedirs(f"./images/{time_run}")
+time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+os.makedirs(os.path.join(images_path, time_run), exist_ok=True)
 
 device = 'cpu'
 model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(device)
@@ -105,9 +108,7 @@ class ImageView(QtWidgets.QGraphicsView):
 
     # set the new image and redraw
     def updateImage(self, img):
-        #segmented_img = self.segment_image(img)
-        segmented_img = img
-        self.image = segmented_img
+        self.image = img
         self.scene().invalidate()
 
     # saves a local image
@@ -132,76 +133,76 @@ class ImageView(QtWidgets.QGraphicsView):
         if not self.image.isNull():
             painter.drawImage(rect, self.image)
 
-    def segment_image(self, img):
-        '''try:
-            global frame_num
-            img.save(f"./image/{timestamp}/{frame_num}.png")
-            frame_num += 1
-        except Exception as e:
-            print(e)'''
-        img_np = self.qimage_to_numpy(img)
-        original_height, original_width = img_np.shape[:2]  # Get the original image size
+    # def segment_image(self, img):
+    #     '''try:
+    #         global frame_num
+    #         img.save(f"./image/{timestamp}/{frame_num}.png")
+    #         frame_num += 1
+    #     except Exception as e:
+    #         print(e)'''
+    #     img_np = self.qimage_to_numpy(img)
+    #     original_height, original_width = img_np.shape[:2]  # Get the original image size
         
-        # Convert to PIL Image (for compatibility with torchvision transforms)
-        img_pil = Image.fromarray(img_np)
+    #     # Convert to PIL Image (for compatibility with torchvision transforms)
+    #     img_pil = Image.fromarray(img_np)
 
-        # Define the necessary transforms (resize, normalize, etc.)
-        transform = transforms.Compose([
-            transforms.CenterCrop(218),        # Crop the center 218x218
-            transforms.Resize((512, 512)),     # Resize to 512x512
-            transforms.ToTensor(),             # Convert to tensor
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Normalize
-        ])
+    #     # Define the necessary transforms (resize, normalize, etc.)
+    #     transform = transforms.Compose([
+    #         transforms.CenterCrop(218),        # Crop the center 218x218
+    #         transforms.Resize((512, 512)),     # Resize to 512x512
+    #         transforms.ToTensor(),             # Convert to tensor
+    #         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Normalize
+    #     ])
 
-        img_tensor = transform(img_pil).unsqueeze(0).to(self.device)
+    #     img_tensor = transform(img_pil).unsqueeze(0).to(self.device)
 
-        with torch.no_grad():
-            output = self.model(img_tensor)  # Run the model
+    #     with torch.no_grad():
+    #         output = self.model(img_tensor)  # Run the model
 
-        # Post-process the model output
-        segmentation_map = torch.argmax(output, dim=1).squeeze().cpu().numpy()  # Get the class with the highest score
+    #     # Post-process the model output
+    #     segmentation_map = torch.argmax(output, dim=1).squeeze().cpu().numpy()  # Get the class with the highest score
 
-        # Resize the segmentation map back to the original image size
-        resized_segmentation_map = self.resize_segmentation_map(segmentation_map, (original_width, original_height))
+    #     # Resize the segmentation map back to the original image size
+    #     resized_segmentation_map = self.resize_segmentation_map(segmentation_map, (original_width, original_height))
 
-        # Map the output to a color for visualization
-        return self.apply_colormap(resized_segmentation_map)
+    #     # Map the output to a color for visualization
+    #     return self.apply_colormap(resized_segmentation_map)
 
-    def resize_segmentation_map(self, segmentation_map, target_size):
-        resized_map = resize(segmentation_map, target_size, order=1, mode='reflect', anti_aliasing=True)
-        return (resized_map > 0.5).astype(np.uint8)  # Threshold for segmentation map
+    # def resize_segmentation_map(self, segmentation_map, target_size):
+    #     resized_map = resize(segmentation_map, target_size, order=1, mode='reflect', anti_aliasing=True)
+    #     return (resized_map > 0.5).astype(np.uint8)  # Threshold for segmentation map
 
-    def apply_colormap(self, segmentation_map):
-        colormap = np.array([
-            [0, 0, 0],      # background
-            [255, 0, 0],    # (red)
-        ])
+    # def apply_colormap(self, segmentation_map):
+    #     colormap = np.array([
+    #         [0, 0, 0],      # background
+    #         [255, 0, 0],    # (red)
+    #     ])
         
-        # Map segmentation output to colors
-        segmented_image = colormap[segmentation_map]
-        return segmented_image
+    #     # Map segmentation output to colors
+    #     segmented_image = colormap[segmentation_map]
+    #     return segmented_image
 
-    def convert_to_qimage(self, img_np):
-        """
-        Convert a NumPy array (image) into a QImage.
-        """
-        height, width, channels = img_np.shape
-        bytes_per_line = channels * width
-        qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-        return qimage
+    # def convert_to_qimage(self, img_np):
+    #     """
+    #     Convert a NumPy array (image) into a QImage.
+    #     """
+    #     height, width, channels = img_np.shape
+    #     bytes_per_line = channels * width
+    #     qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+    #     return qimage
 
-    def qimage_to_numpy(self, image: QtGui.QImage):
-        """
-        Convert a QImage to a NumPy array.
-        """
-        image = image.convertToFormat(QtGui.QImage.Format_Grayscale8)
-        width = image.width()
-        height = image.height()
+    # def qimage_to_numpy(self, image: QtGui.QImage):
+    #     """
+    #     Convert a QImage to a NumPy array.
+    #     """
+    #     image = image.convertToFormat(QtGui.QImage.Format_Grayscale8)
+    #     width = image.width()
+    #     height = image.height()
 
-        ptr = image.bits()
-        arr = np.frombuffer(ptr, dtype=np.uint8, count=height * image.bytesPerLine())
-        arr = arr.reshape((height, image.bytesPerLine()))
-        return arr[:, :width]
+    #     ptr = image.bits()
+    #     arr = np.frombuffer(ptr, dtype=np.uint8, count=height * image.bytesPerLine())
+    #     arr = arr.reshape((height, image.bytesPerLine()))
+    #     return arr[:, :width]
 
 
 # main widget with controls and ui
@@ -410,36 +411,26 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     if bpp == 4:
         img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
         img_pil = Image.frombytes("RGBA", (width, height), image)
-        #print("rgb")
     else:
         img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
         img_pil = Image.frombytes("L", (width, height), image)
-        #print("grayscale")
 
-    # Resize image using OpenCV
     try:
         img_np = np.array(img_pil)
         img_resized = cv2.resize(img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA)
         img_resized = img_resized[:, :, :3]
 
-    # Apply weights to average RGB
         img_resized = np.dot(img_resized, [0.299, 0.587, 0.114])
 
         img_resized = img_resized.reshape(128, 128, 1)
-        #print(img_resized.shape)
         img_resized = torch.from_numpy(img_resized.astype(np.float32)).unsqueeze(0)
         img_resized = img_resized.permute(0, 3, 1, 2)
-        #print(img_resized.shape)
 
-        # 6/12/25 try to use model
         with torch.no_grad():
             _, pred = model(img_resized)
             pred = pred.squeeze(0).numpy()
-        # Normalize and convert to torch
-        #img_tensor = torch.from_numpy(img_resized.astype(np.float32) / 255.0).unsqueeze(0)
+
         pred_img = Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
-        
-        pred_img.save(f"./cast-12.0.2-macos.arm64/images/test.png")
         try:
             global quaternions
             global time_run
@@ -464,35 +455,16 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
             (pred * 255).astype(np.uint8).copy(), 
             image_size[1], 
             image_size[0], 
-            image_size[1],  # bytesPerLine for grayscale: width * 1
+            image_size[1],
             QtGui.QImage.Format_Grayscale8
         )
     except Exception as e:
         print(e)
         img_qt_resized = img_qt
 
-    signaller.usimage = img_qt_resized  # Clone to detach from NumPy memory
+    signaller.usimage = img_qt_resized 
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
-
-    # print(imu[0].qw, imu[0].qx, imu[0].qy, imu[0].qz)
-    # try:
-    #     global quaternions
-    #     global time_run
-    #     global frame_num
-    #     new_row = pd.DataFrame([
-    #         {'qw': imu[0].qw, 'qx': imu[0].qx, 'qy': imu[0].qy, 'qz': imu[0].qz}
-    #     ])
-    #     quaternions = pd.concat(
-    #         [quaternions, 
-    #         new_row]
-    #     )
-    #     print(f"saving {frame_num}")
-    #     img_save.save(f"./images/{time_run}/{frame_num}.png")
-    #     print(f"saved {frame_num}")
-    #     frame_num += 1
-    # except Exception as e:
-    #     print(e)
     return
 
 
