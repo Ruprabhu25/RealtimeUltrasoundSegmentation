@@ -4,11 +4,6 @@ import ctypes
 import datetime
 import os.path
 import sys
-
-if sys.platform.startswith("linux"):
-    libcast_handle = ctypes.CDLL("./libcast.so", ctypes.RTLD_GLOBAL)._handle  # load the libcast.so shared library
-    pyclariuscast = ctypes.cdll.LoadLibrary("./pyclariuscast.so")  # load the pyclariuscast.so shared library
-
 import pyclariuscast
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.Qt3DCore import Qt3DCore
@@ -17,6 +12,8 @@ from PySide6.Qt3DRender import Qt3DRender
 from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QQuaternion, QVector3D
 import pandas as pd
+from dotenv import load_dotenv
+load_dotenv()
 
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
 
@@ -205,7 +202,7 @@ class MainWidget(QtWidgets.QMainWindow):
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
         global quaternions
-        quaternions.to_csv(f"./positions/quaternion_run_{datetime.datetime.now()}.csv")
+        quaternions.to_csv(f"{os.environ["BASE_DIR"]}/positions/quaternion_run_{datetime.datetime.now()}.csv")
         QtWidgets.QApplication.quit()
 
 
