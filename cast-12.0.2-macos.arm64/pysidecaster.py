@@ -43,6 +43,7 @@ CMD_CFI_MODE: Final = 14
 
 images_path = os.path.join(os.environ["BASE_DIR"], "images")
 positions_path = os.path.join(os.environ["BASE_DIR"], "positions")
+model_path = os.path.join(os.environ["BASE_DIR"], os.environ["MODEL_PATH"])
 
 frame_num = 0
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
@@ -51,7 +52,7 @@ os.makedirs(os.path.join(images_path, time_run), exist_ok=True)
 
 device = 'cpu'
 model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(device)
-model.load_state_dict(torch.load(os.getenv("MODEL_PATH"), map_location=device))
+model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()
 
 # custom event for handling change in freeze state
