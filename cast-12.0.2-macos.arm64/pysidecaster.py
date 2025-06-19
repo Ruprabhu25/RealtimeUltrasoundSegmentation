@@ -392,7 +392,7 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
-        quaternions.to_csv(f"./cast-12.0.2-macos.arm64/positions/quaternion_run_{time_run}.csv")
+        quaternions.to_csv(f"./cast-12.0.2-macos.arm64/positions/quaternion_run_{time_run}.csv", columns=["qw", "qx", "qy", "qz"], index=False)
         QtWidgets.QApplication.quit()
 
 
