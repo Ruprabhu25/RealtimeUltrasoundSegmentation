@@ -25,7 +25,6 @@ def extract_number(path):
     filename = os.path.basename(path)
     match = re.search(r'\d+', filename)
     return int(match.group()) if match else -1
-
 image_paths = sorted(image_paths, key=extract_number)
 
 # Match counts
@@ -36,17 +35,23 @@ if len(r) > num_images:
 else:
     image_paths = image_paths[:len(r)]
 
-# downsample for better graphics performance
-r = r[::2]
-centers = centers[::2]
-image_paths = image_paths[::2]
-
 # Plot setup
 fig = plt.figure(figsize=(10, 10))
 ax = fig.add_subplot(111, projection='3d')
 
 # Collect 3D hulls
 all_hulls_3d = []
+
+
+def moving_average(points, window_size=5):
+    kernel = np.ones(window_size) / window_size
+    padded = np.pad(points, ((window_size//2, window_size//2), (0, 0)), mode='wrap')
+    smoothed = np.array([
+        np.convolve(padded[:, dim], kernel, mode='valid')
+        for dim in range(points.shape[1])
+    ]).T
+    return smoothed
+
 
 def interpolate_hull(hull, target_len):
     hull = np.array(hull)
@@ -56,7 +61,16 @@ def interpolate_hull(hull, target_len):
     total_len = dists[-1]
     uniform_dists = np.linspace(0, total_len, target_len + 1)[:-1]
     interp = interp1d(dists, closed, axis=0, kind='quadratic')
-    return interp(uniform_dists)
+    interpolated = interp(uniform_dists)
+    smoothed = moving_average(interpolated, window_size=5)
+    return smoothed
+
+
+def align_hull_to_reference(hull, ref):
+    distances = np.linalg.norm(hull - ref[0], axis=1)
+    min_idx = np.argmin(distances)
+    return np.roll(hull, -min_idx, axis=0)
+
 
 for rot, center, img_path in zip(r, centers, image_paths):
     img = Image.open(img_path).convert("L")
@@ -87,11 +101,11 @@ for rot, center, img_path in zip(r, centers, image_paths):
     all_hulls_3d.append(hull_pts_3d)
 
 # Stitch consecutive hulls
-# the target number of points for interpolation, can be adjusted
-target_points = 20
+target_points = 25
 for i in range(len(all_hulls_3d) - 1):
     h1 = interpolate_hull(all_hulls_3d[i], target_points)
     h2 = interpolate_hull(all_hulls_3d[i + 1], target_points)
+    h2 = align_hull_to_reference(h2, h1)
 
     for j in range(target_points):
         p1, p2 = h1[j], h1[(j + 1) % target_points]
@@ -107,4 +121,5 @@ ax.set_ylabel("Y")
 ax.set_zlabel("Z")
 plt.tight_layout()
 plt.show()
+
 
