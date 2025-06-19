@@ -8,10 +8,12 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
 from scipy.spatial.transform import Rotation as R
 from scipy.interpolate import interp1d
+from dotenv import load_dotenv
 
+load_dotenv()
 # Load quaternions
 quaternions = pd.read_csv(
-    'cast-12.0.2-macos.arm64/positions/quaternion_run_2025-06-12_16-11-14.csv',
+    f"{os.environ['BASE_DIR']}/positions/quaternion_run_2025-06-12_16-11-14.csv",
     skiprows=1
 ).values[:, 1:]  # Skip first column
 quaternions = quaternions[:, [1, 2, 3, 0]]  # Reorder to x, y, z, w
@@ -19,8 +21,8 @@ r = R.from_quat(quaternions)
 centers = r.apply(np.array([[1, 0, 0]] * len(quaternions)))
 
 # Sort image paths
-base_dir = "./cast-12.0.2-macos.arm64/images/2025-06-12_16-11-14"
-image_paths = [os.path.join(base_dir, f) for f in os.listdir(base_dir)]
+image_dir = f"{os.environ['BASE_DIR']}/images/2025-06-12_16-11-14"
+image_paths = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
 def extract_number(path):
     filename = os.path.basename(path)
     match = re.search(r'\d+', filename)
