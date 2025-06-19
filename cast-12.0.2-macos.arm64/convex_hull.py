@@ -46,6 +46,48 @@ def plot_textured_plane(ax, image_path, rotation: R, center=np.zeros(3), size=1.
         linewidth=0, antialiased=False, shade=False
     )
 
+from scipy.spatial import ConvexHull
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+from scipy.spatial import ConvexHull
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+def plot_mask_convex_hull(ax, image_path, rotation: R, center=np.zeros(3), size=1.0):
+    #print(f"Loading image: {image_path}")
+    img = Image.open(image_path).convert("L")
+    img = np.array(img)
+
+    white_pixels = np.argwhere(img > 200)  # (row, col)
+
+    if white_pixels.shape[0] < 3:
+        print("Not enough white pixels for a hull. Skipping.")
+        return
+
+    h, w = img.shape
+    scale_x = size / w
+    scale_y = size / h
+
+    # Convert pixel indices to local 2D coords, centered at (0,0)
+    local_points_2d = np.zeros((white_pixels.shape[0], 2))
+    local_points_2d[:, 0] = (white_pixels[:, 1] - w / 2) * scale_x  # x
+    local_points_2d[:, 1] = ((h / 2) - white_pixels[:, 0]) * scale_y  # y
+
+    # Compute 2D convex hull of white pixels in local plane coords
+    hull_2d = ConvexHull(local_points_2d)
+    hull_points_2d = local_points_2d[hull_2d.vertices]
+
+    # Convert 2D hull points to 3D points on plane (z=0)
+    hull_points_3d_local = np.hstack([hull_points_2d, np.zeros((len(hull_points_2d), 1))])
+
+    # Rotate and translate hull points to 3D space
+    hull_points_3d = rotation.apply(hull_points_3d_local) + center
+
+    # Create a polygon for the hull
+    poly = Poly3DCollection([hull_points_3d], facecolors='white', edgecolors='k', alpha=0.3)
+    ax.add_collection3d(poly)
+
+
+
 # Setup matplotlib 3D plot
 fig = plt.figure(figsize=(10, 10))
 ax = fig.add_subplot(111, projection='3d')
@@ -81,8 +123,11 @@ r = R.from_quat(quaternions)
 centers = r.apply(np.array([[1, 0, 0]] * len(quaternions)))
 
 # Plot each textured plane oriented by quaternion and placed at center
+# for i, (rot, img_path) in enumerate(zip(r, image_paths)):
+#     plot_textured_plane(ax, img_path, rot, center=centers[i], size=0.5)
+
 for i, (rot, img_path) in enumerate(zip(r, image_paths)):
-    plot_textured_plane(ax, img_path, rot, center=centers[i], size=0.5)
+    plot_mask_convex_hull(ax, img_path, rot, center=centers[i], size=0.5)
 
 ax.set_box_aspect([1, 1, 1])
 ax.set_xlabel('X')
