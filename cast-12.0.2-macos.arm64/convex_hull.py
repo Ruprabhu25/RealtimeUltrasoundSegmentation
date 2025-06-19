@@ -25,6 +25,7 @@ def extract_number(path):
     filename = os.path.basename(path)
     match = re.search(r'\d+', filename)
     return int(match.group()) if match else -1
+
 image_paths = sorted(image_paths, key=extract_number)
 
 # Match counts
@@ -34,6 +35,11 @@ if len(r) > num_images:
     centers = centers[:num_images]
 else:
     image_paths = image_paths[:len(r)]
+
+# downsample for better graphics performance
+r = r[::2]
+centers = centers[::2]
+image_paths = image_paths[::2]
 
 # Plot setup
 fig = plt.figure(figsize=(10, 10))
@@ -49,7 +55,7 @@ def interpolate_hull(hull, target_len):
     dists = np.hstack([[0], dists])
     total_len = dists[-1]
     uniform_dists = np.linspace(0, total_len, target_len + 1)[:-1]
-    interp = interp1d(dists, closed, axis=0, kind='linear')
+    interp = interp1d(dists, closed, axis=0, kind='quadratic')
     return interp(uniform_dists)
 
 for rot, center, img_path in zip(r, centers, image_paths):
@@ -81,7 +87,8 @@ for rot, center, img_path in zip(r, centers, image_paths):
     all_hulls_3d.append(hull_pts_3d)
 
 # Stitch consecutive hulls
-target_points = 5
+# the target number of points for interpolation, can be adjusted
+target_points = 20
 for i in range(len(all_hulls_3d) - 1):
     h1 = interpolate_hull(all_hulls_3d[i], target_points)
     h2 = interpolate_hull(all_hulls_3d[i + 1], target_points)
