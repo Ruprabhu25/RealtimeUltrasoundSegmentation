@@ -318,6 +318,14 @@ class MainWidget(QtWidgets.QMainWindow):
                 columns=["qw", "qx", "qy", "qz"],
                 index=False,
             )
+        seg_plot.logger.info("Shutting down application")
+        if seg_plot.plot_initialized:
+            plt.ioff()
+            plt.close("all")
+        seg_plot.all_hulls_3d = []
+        seg_plot.frame_num = 0
+        seg_plot.plot_initialized = False
+        seg_plot.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
         QtWidgets.QApplication.quit()
 
 
