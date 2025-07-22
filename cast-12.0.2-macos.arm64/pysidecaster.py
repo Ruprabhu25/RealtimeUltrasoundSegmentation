@@ -334,6 +334,7 @@ class SegmentationPlot:
     device: str = "cpu"  # device to run the model on
     save_results: bool = False  # whether to save results
     log_level: str = "INFO"  # logging level
+    plot: bool = False
 
     def __post_init__(self):
         # if saving results, create directories for images and positions
@@ -436,18 +437,19 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
             rot, center = get_rotation_center(quat)
             seg_plot.logger.debug(f"quat: {quat}, rot: {rot}, center: {center}")
 
-            if not seg_plot.plot_initialized:
-                plt.ion()
-                fig = plt.figure(figsize=(10, 10))
-                ax = fig.add_subplot(111, projection="3d")
-                seg_plot.all_hulls_3d = []
-                seg_plot.plot_initialized = True
+            if seg_plot.plot:
+                if not seg_plot.plot_initialized:
+                    plt.ion()
+                    fig = plt.figure(figsize=(10, 10))
+                    ax = fig.add_subplot(111, projection="3d")
+                    seg_plot.all_hulls_3d = []
+                    seg_plot.plot_initialized = True
 
-            hull_3d = extract_3d_hull_from_image(
-                np.array(pred_img.convert("L")), rot, center
-            )
+                hull_3d = extract_3d_hull_from_image(
+                    np.array(pred_img.convert("L")), rot, center
+                )
 
-            update_plot_with_new_frame(ax, hull_3d, seg_plot.all_hulls_3d)
+                update_plot_with_new_frame(ax, hull_3d, seg_plot.all_hulls_3d)
 
             plt.draw()
             # plt.pause(0.001)
@@ -541,16 +543,21 @@ def parse_args():
         default="INFO",
         help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
+    parser.add_argument(
+        "--plot",
+        type=bool,
+        default=False
+    )
     args = parser.parse_args()
     return args.device, args.save_results, args.log_level
 
 
 ## main function
 def main():
-    device, save_results, log_level = parse_args()
+    device, save_results, log_level, plot = parse_args()
     global seg_plot
     seg_plot = SegmentationPlot(
-        device=device, save_results=save_results, log_level=log_level
+        device=device, save_results=save_results, log_level=log_level, plot=plot
     )
     load_dotenv()
     cast = pyclariuscast.Caster(
