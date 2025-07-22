@@ -25,14 +25,7 @@ from convex_hull import (
     update_plot_with_new_frame,
 )
 from dataclasses import dataclass
-
-if sys.platform.startswith("linux"):
-    libcast_handle = ctypes.CDLL(
-        "./libcast.so", ctypes.RTLD_GLOBAL
-    )._handle  # load the libcast.so shared library
-    pyclariuscast = ctypes.cdll.LoadLibrary(
-        "./pyclariuscast.so"
-    )  # load the pyclariuscast.so shared library
+from logging import getLogger
 
 # sys.path.append("C:\\Users\\Junfei\\Desktop\\Repos\\RealtimeUltrasoundSegmentation")
 # from Efficientunet.efficientunet import get_efficientunet_b0
@@ -163,7 +156,7 @@ class MainWidget(QtWidgets.QMainWindow):
             try:
                 seg_plot.frame_num = 0
             except Exception as e:
-                print(e)
+                seg_plot.logger.error(e)
             if not cast.isConnected():
                 if cast.connect(ip.text(), int(port.text()), "research"):
                     self.statusBar().showMessage("Connected")
@@ -332,6 +325,7 @@ class MainWidget(QtWidgets.QMainWindow):
 class SegmentationPlot:
     device: str = "cpu"  # device to run the model on
     save_results: bool = False  # whether to save results
+    log_level: str = "INFO"  # logging level
 
     def __post_init__(self):
         # if saving results, create directories for images and positions
@@ -353,6 +347,21 @@ class SegmentationPlot:
         # initialize plotting variables
         self.plot_initialized = False
         self.all_hulls_3d = []
+
+        # logger setup
+        if self.log_level.upper() not in [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL",
+        ]:
+            raise ValueError(f"Invalid log level: {self.log_level}")
+        self.logger = getLogger(__name__)
+        self.logger.setLevel(self.log_level.upper())
+        self.logger.info(
+            f"SegmentationPlot initialized with device={self.device}, save_results={self.save_results}, log_level={self.log_level}"
+        )
 
 
 ## called when a new processed image is streamed
@@ -410,13 +419,14 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                         ),
                     ]
                 )
-                print(f"saving {seg_plot.frame_num}")
+                seg_plot.logger.debug(f"saving {seg_plot.frame_num}")
                 pred_img.save(f"./images/{seg_plot.time_run}/{seg_plot.frame_num}.png")
-                print(f"saved {seg_plot.frame_num}")
+                seg_plot.logger.debug(f"saved {seg_plot.frame_num}")
                 seg_plot.frame_num += 1
 
             quat = [imu[0].qx, imu[0].qy, imu[0].qz, imu[0].qw]
             rot, center = get_rotation_center(quat)
+            seg_plot.logger.debug(f"quat: {quat}, rot: {rot}, center: {center}")
 
             if not seg_plot.plot_initialized:
                 plt.ion()
@@ -432,9 +442,9 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
             update_plot_with_new_frame(ax, hull_3d, seg_plot.all_hulls_3d)
 
             plt.draw()
-            plt.pause(0.001)
+            # plt.pause(0.001)
         except Exception as e:
-            print(e)
+            seg_plot.logger.error(e)
 
         img_qt_resized = QtGui.QImage(
             (pred * 255).astype(np.uint8).copy(),
@@ -444,7 +454,7 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
             QtGui.QImage.Format_Grayscale8,
         )
     except Exception as e:
-        print(e)
+        seg_plot.logger.error(e)
         img_qt_resized = img_qt
 
     signaller.usimage = img_qt_resized
@@ -517,15 +527,23 @@ def parse_args():
     parser.add_argument(
         "--save-results", action="store_true", help="Whether to save results"
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
     args = parser.parse_args()
-    return args.device, args.save_results
+    return args.device, args.save_results, args.log_level
 
 
 ## main function
 def main():
-    device, save_results = parse_args()
+    device, save_results, log_level = parse_args()
     global seg_plot
-    seg_plot = SegmentationPlot(device=device, save_results=save_results)
+    seg_plot = SegmentationPlot(
+        device=device, save_results=save_results, log_level=log_level
+    )
     load_dotenv()
     cast = pyclariuscast.Caster(
         newProcessedImage,
