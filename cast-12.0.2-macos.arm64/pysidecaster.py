@@ -167,6 +167,9 @@ class MainWidget(QtWidgets.QMainWindow):
                     )
             else:
                 if cast.disconnect():
+                    seg_plot.logger.info("disconnected")
+                    if seg_plot.save_results:
+                        seg_plot.logger.info(f"size of quaternion data: seg_plot.quaternions.count()")
                     self.statusBar().showMessage("Disconnected")
                     conn.setText("Connect")
                 else:
@@ -312,20 +315,18 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
+        seg_plot.logger.info("trying to shutdown")
         if seg_plot.save_results:
+            seg_plot.logger.info("saving quaternion data")
             seg_plot.quaternions.to_csv(
                 f"{seg_plot.positions_path}/quaternion_run_{seg_plot.time_run}.csv",
                 columns=["qw", "qx", "qy", "qz"],
                 index=False,
             )
-        seg_plot.logger.info("Shutting down application")
+        seg_plot.logger.info("Shutting down plot")
         if seg_plot.plot_initialized:
             plt.ioff()
             plt.close("all")
-        seg_plot.all_hulls_3d = []
-        seg_plot.frame_num = 0
-        seg_plot.plot_initialized = False
-        seg_plot.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
         QtWidgets.QApplication.quit()
 
 
@@ -334,7 +335,8 @@ class SegmentationPlot:
     device: str = "cpu"  # device to run the model on
     save_results: bool = False  # whether to save results
     log_level: str = "INFO"  # logging level
-    plot: bool = False
+    plot: bool = True # plot image
+    segment_image: bool = True  # whether to segment the image
 
     def __post_init__(self):
         # if saving results, create directories for images and positions
@@ -392,25 +394,24 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     else:
         img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_Grayscale8)
         img_pil = Image.frombytes("L", (width, height), image)
-
     try:
-        img_np = np.array(img_pil)
-        img_resized = cv2.resize(
-            img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA
-        )
-        img_resized = img_resized[:, :, :3]
+        if seg_plot.segment_image:
+            img_np = np.array(img_pil)
+            img_resized = cv2.resize(
+                img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA
+            )
+            img_resized = img_resized[:, :, :3]
 
-        img_resized = np.dot(img_resized, [0.299, 0.587, 0.114])
+            img_resized = np.dot(img_resized, [0.299, 0.587, 0.114])
 
-        img_resized = img_resized.reshape(128, 128, 1)
-        img_resized = torch.from_numpy(img_resized.astype(np.float32)).unsqueeze(0)
-        img_resized = img_resized.permute(0, 3, 1, 2)
+            img_resized = img_resized.reshape(128, 128, 1)
+            img_resized = torch.from_numpy(img_resized.astype(np.float32)).unsqueeze(0)
+            img_resized = img_resized.permute(0, 3, 1, 2)
+            with torch.no_grad():
+                _, pred = seg_plot.model(img_resized)
+                pred = pred.squeeze(0).numpy()
 
-        with torch.no_grad():
-            _, pred = seg_plot.model(img_resized)
-            pred = pred.squeeze(0).numpy()
-
-        pred_img = Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
+            pred_img = Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
         try:
             if seg_plot.save_results:
                 seg_plot.quaternions = pd.concat(
@@ -429,15 +430,17 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                     ]
                 )
                 seg_plot.logger.debug(f"saving {seg_plot.frame_num}")
-                pred_img.save(f"./images/{seg_plot.time_run}/{seg_plot.frame_num}.png")
+                if seg_plot.segment_image:
+                    pred_img.save(f"./images/{seg_plot.time_run}/{seg_plot.frame_num}.png")
+                else:
+                    img_pil.save(f"./images/{seg_plot.time_run}/{seg_plot.frame_num}.png")
                 seg_plot.logger.debug(f"saved {seg_plot.frame_num}")
                 seg_plot.frame_num += 1
 
-            quat = [imu[0].qx, imu[0].qy, imu[0].qz, imu[0].qw]
-            rot, center = get_rotation_center(quat)
-            seg_plot.logger.debug(f"quat: {quat}, rot: {rot}, center: {center}")
-
             if seg_plot.plot:
+                quat = [imu[0].qx, imu[0].qy, imu[0].qz, imu[0].qw]
+                rot, center = get_rotation_center(quat)
+                seg_plot.logger.debug(f"quat: {quat}, rot: {rot}, center: {center}")
                 if not seg_plot.plot_initialized:
                     plt.ion()
                     fig = plt.figure(figsize=(10, 10))
@@ -451,18 +454,21 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
 
                 update_plot_with_new_frame(ax, hull_3d, seg_plot.all_hulls_3d)
 
-            plt.draw()
-            # plt.pause(0.001)
+                plt.draw()
+                #plt.pause(0.001)
         except Exception as e:
             seg_plot.logger.error(e)
 
-        img_qt_resized = QtGui.QImage(
-            (pred * 255).astype(np.uint8).copy(),
-            image_size[1],
-            image_size[0],
-            image_size[1],
-            QtGui.QImage.Format_Grayscale8,
-        )
+        if seg_plot.segment_image:
+            img_qt_resized = QtGui.QImage(
+                (pred * 255).astype(np.uint8).copy(),
+                image_size[1],
+                image_size[0],
+                image_size[1],
+                QtGui.QImage.Format_Grayscale8,
+            )
+        else:
+            img_qt_resized = img_qt
     except Exception as e:
         seg_plot.logger.error(e)
         img_qt_resized = img_qt
@@ -545,19 +551,24 @@ def parse_args():
     )
     parser.add_argument(
         "--plot",
-        type=bool,
-        default=False
+        action="store_true",
     )
+    parser.add_argument(
+        "--segment-image",
+        action="store_true",
+        help="Whether to segment the image",
+    )
+
     args = parser.parse_args()
-    return args.device, args.save_results, args.log_level
+    return args.device, args.save_results, args.log_level, args.plot, args.segment_image
 
 
 ## main function
 def main():
-    device, save_results, log_level, plot = parse_args()
+    device, save_results, log_level, plot, segment_image = parse_args()
     global seg_plot
     seg_plot = SegmentationPlot(
-        device=device, save_results=save_results, log_level=log_level, plot=plot
+        device=device, save_results=save_results, log_level=log_level, plot=plot, segment_image=segment_image
     )
     load_dotenv()
     cast = pyclariuscast.Caster(

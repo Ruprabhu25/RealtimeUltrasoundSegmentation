@@ -137,6 +137,11 @@ cast-12.0.2-macos.arm64/
 
 ## 🎉 Connect US Clarius Device from iPad
 
+# installing conda
+mkdir -p ~/miniconda3
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
 
 # setup (Mac)
 Use conda for your virtual environment. In the cast-12.0.2-macos.arm64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
