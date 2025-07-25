@@ -138,26 +138,29 @@ cast-12.0.2-macos.arm64/
 ## 🎉 Connect US Clarius Device from iPad
 
 
-# setup (Mac)
-Use conda for your virtual environment. In the cast-12.0.2-macos.arm64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
+# setup (Mac-Intel chip-x86_64)
+If you are using an older, intel based mac, use the following instructions. 
+In the cast-12.0.2-macos.x86_64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
 
 the command to copy the dylib to the correct folder should look something like this:
-## cp ./cast-12.0.2-macos.arm64/libcast.dylib /opt/homebrew/Caskroom/miniconda/NAME_OF_CONDA_ENV/bin/../lib/
+## cp ./cast-12.0.2-macos.x86_64/libcast.dylib /opt/homebrew/Caskroom/miniconda/us/bin/lib/
+
+# setup (Mac-Apple Silicon-ARM64)
+If you are using a newer apple silicon based mac, use the following command: 
+In the cast-12.0.2-macos.arm64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
+
+the command to copy the dylib to the correct folder should look something like this:
+## cp ./cast-12.0.2-macos.arm64/libcast.dylib /opt/homebrew/Caskroom/miniconda/us/bin/lib/
+
 
 # installing dependencies
 - all required dependencies can be installed using a conda environment using the file cast-12.0.2-macos.arm64/env.yaml: 
 ## conda env create -f environment.yaml
 
-# setup (Windows)
-Use conda for your virtual environment. In the cast-12.0.2-windows.x86_64 folder there is a libcast.pyd file that you need to copy over to your conda environment's DLL folder.
-
-the command to copy the dylib to the correct folder should look something like this:
-# TODO: Add file line here
-
 ## setting up .env file
 Create a .env file and store the following variables:
-- BASE_DIR: an absolute folder path with the applicable operating system folder path (ex. "/Users/rahul.prabhu/..../RealtimeUltrasoundSegmentation/cast-12.0.2-macos.arm64")
-- MODEL_PATH: the name of the model path file that you are using (ex. "best_mhu.pth")
+- BASE_DIR: an absolute folder path with the applicable operating system folder path (ex. "/Users/rahul.prabhu/RealtimeUltrasoundSegmentation/cast-12.0.2-macos.arm64")
+- MODEL_PATH: the name of the model file that you are using (ex. "best_mhu.pth")
 
 ## Running Programs
 - pysidecaster.py: navigate to the appropriate folder and run the following command in your terminal - "python pysidecaster.py" - this should launch the pysidecaster GUI. To record IMU and image data, first connect to the probe network by turning it on, and then looking for the network that matches the serial code on the probe - the password to the probe will be located in the scanner status? settings in the Clarius app. Once connected, start broadcasting via the Clarius app and click connect on the GUI - this will immediately start recording the IMU data and start saving image frames to a positions/images folder matching the time and date. Once done, click disconnect / quit which will save the positional data to a csv. 
