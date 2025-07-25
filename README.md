@@ -11,6 +11,11 @@ source ~/miniconda3/bin/activate
 conda init --all
 ```
 
+```bash
+cd ~/RealtimeUltrasoundSegmentation
+conda env create -f ./cast-12.0.2-macos.arm64/env.yaml
+```
+
 # setup (Mac-Intel chip-x86_64)
 If you are using an older, intel based mac, use the following instructions. 
 In the cast-12.0.2-macos.x86_64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
