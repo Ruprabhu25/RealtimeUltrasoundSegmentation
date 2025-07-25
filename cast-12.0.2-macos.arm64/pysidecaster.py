@@ -330,51 +330,6 @@ class MainWidget(QtWidgets.QMainWindow):
         QtWidgets.QApplication.quit()
 
 
-@dataclass
-class SegmentationPlot:
-    device: str = "cpu"  # device to run the model on
-    save_results: bool = False  # whether to save results
-    log_level: str = "INFO"  # logging level
-    plot: bool = True # plot image
-    segment_image: bool = True  # whether to segment the image
-
-    def __post_init__(self):
-        # if saving results, create directories for images and positions
-        if self.save_results:
-            self.frame_num = 0
-            self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-            self.images_path = os.path.join(os.environ["BASE_DIR"], "images")
-            os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
-            self.positions_path = os.path.join(os.environ["BASE_DIR"], "positions")
-            os.makedirs(self.positions_path, exist_ok=True)
-            self.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
-
-        # initialize model
-        model_path = os.path.join(os.environ["BASE_DIR"], os.environ["MODEL_PATH"])
-        self.model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(self.device)
-        self.model.load_state_dict(torch.load(model_path, map_location=self.device))
-        self.model.eval()
-
-        # initialize plotting variables
-        self.plot_initialized = False
-        self.all_hulls_3d = []
-
-        # logger setup
-        if self.log_level.upper() not in [
-            "DEBUG",
-            "INFO",
-            "WARNING",
-            "ERROR",
-            "CRITICAL",
-        ]:
-            raise ValueError(f"Invalid log level: {self.log_level}")
-        self.logger = getLogger(__name__)
-        self.logger.setLevel(self.log_level.upper())
-        self.logger.info(
-            f"SegmentationPlot initialized with device={self.device}, save_results={self.save_results}, log_level={self.log_level}"
-        )
-
-
 ## called when a new processed image is streamed
 # @param image the scan-converted image data
 # @param width width of the image in pixels
@@ -530,6 +485,50 @@ def buttonsFn(button, clicks):
     evt = ButtonEvent(button, clicks)
     QtCore.QCoreApplication.postEvent(signaller, evt)
     return
+
+@dataclass
+class SegmentationPlot:
+    device: str = "cpu"  # device to run the model on
+    save_results: bool = False  # whether to save results
+    log_level: str = "INFO"  # logging level
+    plot: bool = True # plot image
+    segment_image: bool = True  # whether to segment the image
+
+    def __post_init__(self):
+        # if saving results, create directories for images and positions
+        if self.save_results:
+            self.frame_num = 0
+            self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            self.images_path = os.path.join(os.environ["BASE_DIR"], "images")
+            os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
+            self.positions_path = os.path.join(os.environ["BASE_DIR"], "positions")
+            os.makedirs(self.positions_path, exist_ok=True)
+            self.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
+
+        # initialize model
+        model_path = os.path.join(os.environ["BASE_DIR"], os.environ["MODEL_PATH"])
+        self.model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(self.device)
+        self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+        self.model.eval()
+
+        # initialize plotting variables
+        self.plot_initialized = False
+        self.all_hulls_3d = []
+
+        # logger setup
+        if self.log_level.upper() not in [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL",
+        ]:
+            raise ValueError(f"Invalid log level: {self.log_level}")
+        self.logger = getLogger(__name__)
+        self.logger.setLevel(self.log_level.upper())
+        self.logger.info(
+            f"SegmentationPlot initialized with device={self.device}, save_results={self.save_results}, log_level={self.log_level}"
+        )
 
 
 def parse_args():
