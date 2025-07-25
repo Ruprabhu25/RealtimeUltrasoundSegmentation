@@ -41,9 +41,11 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
-images_path = os.path.join(os.environ["BASE_DIR"], "images")
-positions_path = os.path.join(os.environ["BASE_DIR"], "positions")
-model_path = os.path.join(os.environ["BASE_DIR"], os.environ["MODEL_PATH"])
+base_dir = os.getcwd()
+
+images_path = os.path.join(base_dir, "images")
+positions_path = os.path.join(base_dir, "positions")
+model_path = os.path.join(base_dir, "best_mhu.pth")
 
 frame_num = 0
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
