@@ -129,7 +129,7 @@ def update_plot_with_new_frame(ax, hull_3d, all_hulls_3d, target_points=25):
             q2, q1 = h2[(j + 1) % target_points], h2[j]
             quad = np.array([p1, p2, q2, q1])
             side = Poly3DCollection(
-                [quad], facecolors="lightblue", edgecolors="k", alpha=0.8
+                [quad], facecolors="lightpink", edgecolors="k", alpha=0.5
             )
             ax.add_collection3d(side)
 

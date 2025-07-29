@@ -139,7 +139,7 @@ class MainWidget(QtWidgets.QMainWindow):
 
         ip = QtWidgets.QLineEdit("192.168.1.1")
         ip.setInputMask("000.000.000.000")
-        port = QtWidgets.QLineEdit("36035")
+        port = QtWidgets.QLineEdit("5828")
         port.setInputMask("00000")
 
         conn = QtWidgets.QPushButton("Connect")
@@ -465,6 +465,9 @@ def plot_update_handler(hull_3d, all_hulls_3d, quaternions):
         plt.ion()
         seg_plot.fig = plt.figure(figsize=(10, 10))
         seg_plot.ax = seg_plot.fig.add_subplot(111, projection="3d")
+        seg_plot.ax.set_xlim(-1.0, 1.0)
+        seg_plot.ax.set_ylim(-1.0, 1.0)
+        seg_plot.ax.set_zlim(-1.0, 1.0)
         seg_plot.plot_initialized = True
 
     update_plot_with_new_frame(seg_plot.ax, hull_3d, all_hulls_3d)
@@ -542,7 +545,7 @@ class SegmentationPlot:
             os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
             self.positions_path = os.path.join(self.base_dir, "positions")
             os.makedirs(self.positions_path, exist_ok=True)
-            self.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
+        self.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
 
         # initialize model
         model_path = os.path.join(self.base_dir, self.model_file)
