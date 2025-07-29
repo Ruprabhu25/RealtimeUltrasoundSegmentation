@@ -42,6 +42,8 @@ CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
 base_dir = os.getcwd()
+if os.path.dirname(base_dir).startswith("cast-"):
+    print("Running from cast directory")
 
 images_path = os.path.join(base_dir, "images")
 positions_path = os.path.join(base_dir, "positions")
@@ -135,77 +137,6 @@ class ImageView(QtWidgets.QGraphicsView):
     def drawForeground(self, painter, rect):
         if not self.image.isNull():
             painter.drawImage(rect, self.image)
-
-    # def segment_image(self, img):
-    #     '''try:
-    #         global frame_num
-    #         img.save(f"./image/{timestamp}/{frame_num}.png")
-    #         frame_num += 1
-    #     except Exception as e:
-    #         print(e)'''
-    #     img_np = self.qimage_to_numpy(img)
-    #     original_height, original_width = img_np.shape[:2]  # Get the original image size
-        
-    #     # Convert to PIL Image (for compatibility with torchvision transforms)
-    #     img_pil = Image.fromarray(img_np)
-
-    #     # Define the necessary transforms (resize, normalize, etc.)
-    #     transform = transforms.Compose([
-    #         transforms.CenterCrop(218),        # Crop the center 218x218
-    #         transforms.Resize((512, 512)),     # Resize to 512x512
-    #         transforms.ToTensor(),             # Convert to tensor
-    #         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Normalize
-    #     ])
-
-    #     img_tensor = transform(img_pil).unsqueeze(0).to(self.device)
-
-    #     with torch.no_grad():
-    #         output = self.model(img_tensor)  # Run the model
-
-    #     # Post-process the model output
-    #     segmentation_map = torch.argmax(output, dim=1).squeeze().cpu().numpy()  # Get the class with the highest score
-
-    #     # Resize the segmentation map back to the original image size
-    #     resized_segmentation_map = self.resize_segmentation_map(segmentation_map, (original_width, original_height))
-
-    #     # Map the output to a color for visualization
-    #     return self.apply_colormap(resized_segmentation_map)
-
-    # def resize_segmentation_map(self, segmentation_map, target_size):
-    #     resized_map = resize(segmentation_map, target_size, order=1, mode='reflect', anti_aliasing=True)
-    #     return (resized_map > 0.5).astype(np.uint8)  # Threshold for segmentation map
-
-    # def apply_colormap(self, segmentation_map):
-    #     colormap = np.array([
-    #         [0, 0, 0],      # background
-    #         [255, 0, 0],    # (red)
-    #     ])
-        
-    #     # Map segmentation output to colors
-    #     segmented_image = colormap[segmentation_map]
-    #     return segmented_image
-
-    # def convert_to_qimage(self, img_np):
-    #     """
-    #     Convert a NumPy array (image) into a QImage.
-    #     """
-    #     height, width, channels = img_np.shape
-    #     bytes_per_line = channels * width
-    #     qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
-    #     return qimage
-
-    # def qimage_to_numpy(self, image: QtGui.QImage):
-    #     """
-    #     Convert a QImage to a NumPy array.
-    #     """
-    #     image = image.convertToFormat(QtGui.QImage.Format_Grayscale8)
-    #     width = image.width()
-    #     height = image.height()
-
-    #     ptr = image.bits()
-    #     arr = np.frombuffer(ptr, dtype=np.uint8, count=height * image.bytesPerLine())
-    #     arr = arr.reshape((height, image.bytesPerLine()))
-    #     return arr[:, :width]
 
 
 # main widget with controls and ui
@@ -394,7 +325,7 @@ class MainWidget(QtWidgets.QMainWindow):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
-        quaternions.to_csv(f"./cast-12.0.2-macos.arm64/positions/quaternion_run_{time_run}.csv", columns=["qw", "qx", "qy", "qz"], index=False)
+        quaternions.to_csv(f"{positions_path}/quaternion_run_{time_run}.csv", columns=["qw", "qx", "qy", "qz"], index=False)
         QtWidgets.QApplication.quit()
 
 
