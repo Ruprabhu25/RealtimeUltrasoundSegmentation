@@ -40,23 +40,10 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
-# base_dir = os.getcwd()
-# if os.path.dirname(base_dir).startswith("cast-"):
-#     print("Running from cast directory")
+from PySide6.QtCore import QObject, Signal
 
-# images_path = os.path.join(base_dir, "images")
-# positions_path = os.path.join(base_dir, "positions")
-# model_path = os.path.join(base_dir, "best_mhu.pth")
-
-# frame_num = 0
-# quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
-# time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-# os.makedirs(os.path.join(images_path, time_run), exist_ok=True)
-
-# device = 'cpu'
-# model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(device)
-# model.load_state_dict(torch.load(model_path, map_location=device))
-# model.eval()
+class PlotSignaller(QObject):
+    plot_update = Signal(object, object, object)  # hull_3d, all_hulls_3d, quaternions
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
@@ -403,9 +390,8 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                 )
                 seg_plot.logger.debug(f"saving {seg_plot.frame_num}")
                 if seg_plot.segment_image:
-                    pred_img.save(f"./images/{seg_plot.time_run}/{seg_plot.frame_num}.png")
-                else:
-                    img_pil.save(f"./images/{seg_plot.time_run}/{seg_plot.frame_num}.png")
+                    pred_img.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}_segmented.png")
+                img_pil.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}.png")
                 seg_plot.logger.debug(f"saved {seg_plot.frame_num}")
                 seg_plot.frame_num += 1
 
@@ -413,21 +399,13 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                 quat = [imu[0].qx, imu[0].qy, imu[0].qz, imu[0].qw]
                 rot, center = get_rotation_center(quat)
                 seg_plot.logger.debug(f"quat: {quat}, rot: {rot}, center: {center}")
-                if not seg_plot.plot_initialized:
-                    plt.ion()
-                    fig = plt.figure(figsize=(10, 10))
-                    ax = fig.add_subplot(111, projection="3d")
-                    seg_plot.all_hulls_3d = []
-                    seg_plot.plot_initialized = True
 
                 hull_3d = extract_3d_hull_from_image(
                     np.array(pred_img.convert("L")), rot, center
                 )
 
-                update_plot_with_new_frame(ax, hull_3d, seg_plot.all_hulls_3d)
-
-                plt.draw()
-                #plt.pause(0.001)
+                # Emit signal to main thread for plotting
+                seg_plot.plot_signaller.plot_update.emit(hull_3d, seg_plot.all_hulls_3d, seg_plot.quaternions)
         except Exception as e:
             seg_plot.logger.error(e)
 
@@ -450,6 +428,15 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     QtCore.QCoreApplication.postEvent(signaller, evt)
     return
 
+def plot_update_handler(hull_3d, all_hulls_3d, quaternions):
+    if not seg_plot.plot_initialized:
+        plt.ion()
+        seg_plot.fig = plt.figure(figsize=(10, 10))
+        seg_plot.ax = seg_plot.fig.add_subplot(111, projection="3d")
+        seg_plot.plot_initialized = True
+
+    update_plot_with_new_frame(seg_plot.ax, hull_3d, all_hulls_3d)
+    plt.draw()
 
 ## called when a new raw image is streamed
 # @param image the raw pre scan-converted image data, uncompressed 8-bit or jpeg compressed
@@ -508,22 +495,25 @@ class SegmentationPlot:
     device: str = "cpu"  # device to run the model on
     save_results: bool = False  # whether to save results
     log_level: str = "INFO"  # logging level
-    plot: bool = True # plot image
+    plot: bool = True # whether to plot image or not
     segment_image: bool = True  # whether to segment the image
+    base_dir: str = os.getcwd()  # base directory for saving results
+    model_file: str = "best_mhu.pth"  # model file name
+    plot_signaller: PlotSignaller = None  # signaller for plot updates
 
     def __post_init__(self):
         # if saving results, create directories for images and positions
         if self.save_results:
             self.frame_num = 0
             self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-            self.images_path = os.path.join(os.environ["BASE_DIR"], "images")
+            self.images_path = os.path.join(self.base_dir, "images")
             os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
-            self.positions_path = os.path.join(os.environ["BASE_DIR"], "positions")
+            self.positions_path = os.path.join(self.base_dir, "positions")
             os.makedirs(self.positions_path, exist_ok=True)
             self.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
 
         # initialize model
-        model_path = os.path.join(os.environ["BASE_DIR"], os.environ["MODEL_PATH"])
+        model_path = os.path.join(self.base_dir, self.model_file)
         self.model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(self.device)
         self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model.eval()
@@ -586,6 +576,9 @@ def main():
     seg_plot = SegmentationPlot(
         device=device, save_results=save_results, log_level=log_level, plot=plot, segment_image=segment_image
     )
+    plot_signaller = PlotSignaller()
+    plot_signaller.plot_update.connect(plot_update_handler)
+    seg_plot.plot_signaller = plot_signaller  # make it accessible
     load_dotenv()
     cast = pyclariuscast.Caster(
         newProcessedImage,
