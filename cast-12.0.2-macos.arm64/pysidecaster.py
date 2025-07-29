@@ -410,13 +410,45 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
             seg_plot.logger.error(e)
 
         if seg_plot.segment_image:
+            # img_qt_resized = QtGui.QImage(
+            #     (pred * 255).astype(np.uint8).copy(),
+            #     image_size[1],
+            #     image_size[0],
+            #     image_size[1],
+            #     QtGui.QImage.Format_Grayscale8,
+            # )
+
+            ### experimental: composite the segmentation mask on the original image
+            # Resize original grayscale image to match segmentation output size
+            img_original_resized = img_pil.convert("RGB").resize(image_size)
+
+            # Create a transparent blue mask from the prediction
+            seg_mask = (pred * 255).astype(np.uint8)
+            blue_overlay = np.zeros((128, 128, 4), dtype=np.uint8)
+            blue_overlay[..., 2] = 255  # full blue
+            blue_overlay[..., 3] = (seg_mask * 0.5).astype(np.uint8)  # alpha: 0–128
+
+            # Convert both to PIL
+            original_img = img_original_resized.convert("RGBA")
+            overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
+
+            # Composite the overlay on top of the original image
+            composited = Image.alpha_composite(original_img, overlay_img)
+
+            # Combine (side by side) the composited image and the original image
+            final_display = Image.new("RGBA", (128 * 2, 128))
+            final_display.paste(composited, (0, 0))
+            final_display.paste(original_img, (128, 0))
+
+            # Convert to QImage for display
             img_qt_resized = QtGui.QImage(
-                (pred * 255).astype(np.uint8).copy(),
-                image_size[1],
-                image_size[0],
-                image_size[1],
-                QtGui.QImage.Format_Grayscale8,
+                final_display.tobytes("raw", "RGBA"),
+                final_display.size[0],
+                final_display.size[1],
+                final_display.size[0] * 4,
+                QtGui.QImage.Format_RGBA8888,
             )
+            ### end of experimental
         else:
             img_qt_resized = img_qt
     except Exception as e:
