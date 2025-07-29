@@ -40,23 +40,23 @@ CMD_GAIN_INC: Final = 7
 CMD_B_MODE: Final = 12
 CMD_CFI_MODE: Final = 14
 
-base_dir = os.getcwd()
-if os.path.dirname(base_dir).startswith("cast-"):
-    print("Running from cast directory")
+# base_dir = os.getcwd()
+# if os.path.dirname(base_dir).startswith("cast-"):
+#     print("Running from cast directory")
 
-images_path = os.path.join(base_dir, "images")
-positions_path = os.path.join(base_dir, "positions")
-model_path = os.path.join(base_dir, "best_mhu.pth")
+# images_path = os.path.join(base_dir, "images")
+# positions_path = os.path.join(base_dir, "positions")
+# model_path = os.path.join(base_dir, "best_mhu.pth")
 
-frame_num = 0
-quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
-time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-os.makedirs(os.path.join(images_path, time_run), exist_ok=True)
+# frame_num = 0
+# quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
+# time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+# os.makedirs(os.path.join(images_path, time_run), exist_ok=True)
 
-device = 'cpu'
-model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(device)
-model.load_state_dict(torch.load(model_path, map_location=device))
-model.eval()
+# device = 'cpu'
+# model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(device)
+# model.load_state_dict(torch.load(model_path, map_location=device))
+# model.eval()
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
