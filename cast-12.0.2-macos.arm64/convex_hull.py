@@ -6,9 +6,9 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
-from scipy.spatial.transform import Rotation as R
 from scipy.interpolate import interp1d
 from dotenv import load_dotenv
+import cv2
 
 
 def get_rotation_center(quat):
@@ -36,6 +36,31 @@ def get_sorted_image_paths(image_dir):
 
     image_paths = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
     return sorted(image_paths, key=extract_number)
+
+
+def clean_and_extract_largest_contour(img, white_thresh=200, min_area=100):
+    """Threshold, clean, and find the largest contour."""
+    # Convert to binary mask
+    _, binary = cv2.threshold(img, white_thresh, 255, cv2.THRESH_BINARY)
+
+    # Morphological operations to remove small noise
+    kernel = np.ones((3, 3), np.uint8)
+    cleaned = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=2)
+    cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+    # Find contours
+    contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if not contours:
+        return None
+
+    # Filter by area and pick the largest valid one
+    valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
+    if not valid_contours:
+        return None
+
+    largest_contour = max(valid_contours, key=cv2.contourArea)
+    return largest_contour
 
 
 def moving_average(points, window_size=5):
@@ -74,18 +99,20 @@ def load_image_as_grayscale(img_path):
     return np.array(img)
 
 
-def extract_3d_hull_from_image(img, rotation, center, size=0.5, white_thresh=200):
-    white_pixels = np.argwhere(img > white_thresh)
-    if white_pixels.shape[0] < 3:
+def extract_3d_hull_from_image(img, rotation, center, size=0.5, white_thresh=200, min_area=100):
+    contour = clean_and_extract_largest_contour(img, white_thresh, min_area)
+    if contour is None or len(contour) < 3:
         return None
 
     h, w = img.shape
     scale_x = size / w
     scale_y = size / h
 
-    local_2d = np.zeros((white_pixels.shape[0], 2))
-    local_2d[:, 0] = (white_pixels[:, 1] - w / 2) * scale_x
-    local_2d[:, 1] = ((h / 2) - white_pixels[:, 0]) * scale_y
+    # Convert contour to centered 2D coordinates
+    contour = contour.squeeze()  # Shape (N, 2)
+    local_2d = np.zeros_like(contour, dtype=np.float32)
+    local_2d[:, 0] = (contour[:, 0] - w / 2) * scale_x
+    local_2d[:, 1] = ((h / 2) - contour[:, 1]) * scale_y
 
     try:
         hull_2d = ConvexHull(local_2d)
@@ -97,6 +124,14 @@ def extract_3d_hull_from_image(img, rotation, center, size=0.5, white_thresh=200
     hull_pts_3d = rotation.apply(hull_pts_3d_local) + center
     return hull_pts_3d
 
+# debugging
+def visualize_contours(img, contour):
+    vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    cv2.drawContours(vis, [contour], -1, (0, 255, 0), 2)
+    plt.imshow(vis)
+    plt.title("Selected Contour")
+    plt.axis("off")
+    plt.show()
 
 def stitch_and_plot_hulls(ax, all_hulls_3d, target_points=25):
     for i in range(len(all_hulls_3d) - 1):
