@@ -45,6 +45,14 @@ Create a .env file and store the following variables:
 - 3DstickGUI.py - navigate to the appropriate folder and run the following command in your terminal - "python 3DstickGUI.py" - this will launch another GUI containing a probe object. To show the direction of a probe for a run that was captured using pysidecaster, upload a quaternion csv file using the provided button.
 - convex_hull.py - navigate to the appropriate folder and run the following command in your terminal - "python convex_hull.py". You will need to have the quaternion data in the positions folder (which should be already done assuming you have the correct BASE_DIR env var loaded) and download the appropriate images from OneDrive downloaded to the images folder https://ucsdcloud-my.sharepoint.com/:f:/r/personal/raprabhu_ucsd_edu/Documents/RealtimeUltrasoundSegmentation?csf=1&web=1&e=U2LScA.
 
+## before running the GUI
+before every session, you need to update your code to any changes:
+To pull the changes from github, run the following command:
+```bash
+cd ~/RealtimeUltrasoundSegmentation
+git pull
+```
+
 ## running the GUI
 to run the gui, run the following:
 for M1-4 mac users:
