@@ -49,12 +49,14 @@ Create a .env file and store the following variables:
 to run the gui, run the following:
 for M1-4 mac users:
 ```bash
+conda activate us
 cd ~/RealtimeUltrasoundSegmentation/cast-12.0.2-macos.arm64
 python pysidecaster.py
 ```
 
 for intel mac users:
 ```bash
+conda activate us
 cd ~/RealtimeUltrasoundSegmentation/cast-12.0.2-macos.x86_64
 python pysidecaster.py
 ```
