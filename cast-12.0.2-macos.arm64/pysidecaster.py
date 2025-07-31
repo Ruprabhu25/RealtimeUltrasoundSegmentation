@@ -23,6 +23,9 @@ from convex_hull import (
     extract_3d_hull_from_image,
     get_rotation_center,
     update_plot_with_new_frame,
+    quaternion_distance,
+    MIN_ROTATION_RAD,
+    MAX_ROTATION_RAD
 )
 from dataclasses import dataclass
 from logging import getLogger
@@ -346,7 +349,7 @@ class MainWidget(QtWidgets.QMainWindow):
 def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angle, imu):
     bpp = sz / (width * height)
     image_size = (128, 128)
-
+    seg_plot.frame_num += 1
     if bpp == 4:
         img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
         img_pil = Image.frombytes("RGBA", (width, height), image)
@@ -397,13 +400,29 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
 
             if seg_plot.plot:
                 quat = [imu[0].qx, imu[0].qy, imu[0].qz, imu[0].qw]
+                print(quat)            
+                # Skip if quaternion hasn't changed significantly
+                if seg_plot.last_quat is not None:
+                    angle = quaternion_distance(quat, seg_plot.last_quat)
+                    #print(angle)
+                    if angle < MIN_ROTATION_RAD:
+                        print(f"Skipped frame due to min threshold: Δangle={np.degrees(angle):.2f}°")
+                        return
+                    if angle > MAX_ROTATION_RAD:
+                        print(f"Skipped frame due to max threshold: Δangle={np.degrees(angle):.2f}°")
+                        return
+                if seg_plot.frame_num % 10 != 0:
+                    return
+
                 rot, center = get_rotation_center(quat)
-                seg_plot.logger.debug(f"quat: {quat}, rot: {rot}, center: {center}")
+                print(f"quat: {quat}, rot: {rot}, center: {center}")
 
                 hull_3d = extract_3d_hull_from_image(
                     np.array(pred_img.convert("L")), rot, center
                 )
 
+                # Update last_quat
+                seg_plot.last_quat = quat
                 # Emit signal to main thread for plotting
                 seg_plot.plot_signaller.plot_update.emit(hull_3d, seg_plot.all_hulls_3d, seg_plot.quaternions)
         except Exception as e:
@@ -529,12 +548,14 @@ def buttonsFn(button, clicks):
 class SegmentationPlot:
     device: str = "cpu"  # device to run the model on
     save_results: bool = False  # whether to save results
-    log_level: str = "INFO"  # logging level
+    log_level: str = "DEBUG"  # logging level
     plot: bool = True # whether to plot image or not
     segment_image: bool = True  # whether to segment the image
     base_dir: str = os.getcwd()  # base directory for saving results
     model_file: str = "best_mhu.pth"  # model file name
     plot_signaller: PlotSignaller = None  # signaller for plot updates
+    last_quat: list | None = None
+    frame_num: int = 0
 
     def __post_init__(self):
         # if saving results, create directories for images and positions
@@ -587,7 +608,7 @@ def parse_args():
     parser.add_argument(
         "--log-level",
         type=str,
-        default="INFO",
+        default="DEBUG",
         help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
     parser.add_argument(

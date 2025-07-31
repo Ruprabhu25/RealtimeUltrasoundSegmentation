@@ -9,6 +9,15 @@ from scipy.spatial import ConvexHull
 from scipy.interpolate import interp1d
 from dotenv import load_dotenv
 import cv2
+from scipy.spatial.transform import Rotation as R
+
+from math import radians
+
+# Configurable minimum rotation (in degrees)
+MIN_ROTATION_DEG = 1  # ignore frames with < 2° change
+MAX_ROTATION_DEG = 10.0
+MIN_ROTATION_RAD = radians(MIN_ROTATION_DEG)
+MAX_ROTATION_RAD = radians(MAX_ROTATION_DEG)
 
 
 def get_rotation_center(quat):
@@ -17,6 +26,8 @@ def get_rotation_center(quat):
     center = rotation.apply(
         np.array([[1, 0, 0]])
     )  # Assuming a unit vector for the center
+    # print(f"rotation: {rotation}")
+    # print(f"center: {center}")
     return rotation, center
 
 
@@ -121,7 +132,11 @@ def extract_3d_hull_from_image(img, rotation, center, size=0.5, white_thresh=200
 
     hull_pts_2d = local_2d[hull_2d.vertices]
     hull_pts_3d_local = np.hstack([hull_pts_2d, np.zeros((len(hull_pts_2d), 1))])
-    hull_pts_3d = rotation.apply(hull_pts_3d_local) + center
+    # Force the hull to pivot around the origin (no translation)
+    hull_pts_3d = rotation.apply(hull_pts_3d_local)
+
+    # Optional: lift the base to z=0 (visual only)
+    #hull_pts_3d[:, 2] -= np.min(hull_pts_3d[:, 2])
     return hull_pts_3d
 
 # debugging
@@ -170,6 +185,13 @@ def update_plot_with_new_frame(ax, hull_3d, all_hulls_3d, target_points=25):
 
     all_hulls_3d.append(hull_3d)
 
+def quaternion_distance(q1, q2):
+    """Compute the angular difference (in radians) between two quaternions."""
+    q1 = np.array(q1) / np.linalg.norm(q1)
+    q2 = np.array(q2) / np.linalg.norm(q2)
+    dot_product = np.abs(np.dot(q1, q2))
+    dot_product = np.clip(dot_product, -1.0, 1.0)
+    return 2 * np.arccos(dot_product)
 
 def main():
     load_dotenv()
@@ -201,7 +223,7 @@ def main():
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection="3d")
 
-    stitch_and_plot_hulls(ax, all_hulls_3d, target_points=25)
+    stitch_and_plot_hulls(ax, all_hulls_3d, target_points=50)
 
     # Finalize plot
     ax.set_box_aspect([1, 1, 1])
