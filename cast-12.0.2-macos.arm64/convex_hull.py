@@ -110,7 +110,7 @@ def load_image_as_grayscale(img_path):
     return np.array(img)
 
 
-def extract_3d_hull_from_image(img, rotation, center, size=0.5, white_thresh=200, min_area=100):
+def extract_3d_hull_from_image(img, rotation, center=None, size=0.5, white_thresh=200, min_area=100):
     contour = clean_and_extract_largest_contour(img, white_thresh, min_area)
     if contour is None or len(contour) < 3:
         return None
@@ -119,25 +119,37 @@ def extract_3d_hull_from_image(img, rotation, center, size=0.5, white_thresh=200
     scale_x = size / w
     scale_y = size / h
 
-    # Convert contour to centered 2D coordinates
-    contour = contour.squeeze()  # Shape (N, 2)
-    local_2d = np.zeros_like(contour, dtype=np.float32)
-    local_2d[:, 0] = (contour[:, 0] - w / 2) * scale_x
-    local_2d[:, 1] = ((h / 2) - contour[:, 1]) * scale_y
+    # Convert contour to 2D scaled space
+    contour = contour.squeeze()  # (N, 2)
+    scaled_2d = np.zeros_like(contour, dtype=np.float32)
+    scaled_2d[:, 0] = (contour[:, 0] - w / 2) * scale_x
+    scaled_2d[:, 1] = ((h / 2) - contour[:, 1]) * scale_y  # Flip Y
 
+    # Get convex hull
     try:
-        hull_2d = ConvexHull(local_2d)
+        hull_2d = ConvexHull(scaled_2d)
     except:
         return None
 
-    hull_pts_2d = local_2d[hull_2d.vertices]
-    hull_pts_3d_local = np.hstack([hull_pts_2d, np.zeros((len(hull_pts_2d), 1))])
-    # Force the hull to pivot around the origin (no translation)
-    hull_pts_3d = rotation.apply(hull_pts_3d_local)
+    hull_pts_2d = scaled_2d[hull_2d.vertices]
 
-    # Optional: lift the base to z=0 (visual only)
-    #hull_pts_3d[:, 2] -= np.min(hull_pts_3d[:, 2])
-    return hull_pts_3d
+    # Ensure CCW
+    if cv2.contourArea(hull_pts_2d.astype(np.float32)) < 0:
+        hull_pts_2d = hull_pts_2d[::-1]
+
+    # Convert to 3D (add z=0)
+    hull_pts_3d_local = np.hstack([hull_pts_2d, np.zeros((len(hull_pts_2d), 1))])
+
+    # Rotate entire hull
+    rotated_hull = rotation.apply(hull_pts_3d_local)
+
+    # Anchor the bottom of the rotated hull to the origin
+    lowest_z_idx = np.argmin(rotated_hull[:, 2])  # Find point with lowest z
+    anchor_point = rotated_hull[lowest_z_idx]
+    anchored_hull = rotated_hull - anchor_point  # Translate so that point lies at (0, 0, 0)
+
+    return anchored_hull
+
 
 # debugging
 def visualize_contours(img, contour):
@@ -230,6 +242,7 @@ def main():
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
+    ax.scatter(0, 0, 0, color='red', s=50, label='Origin')
     plt.tight_layout()
     plt.show()
 

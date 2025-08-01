@@ -424,7 +424,7 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                 # Update last_quat
                 seg_plot.last_quat = quat
                 # Emit signal to main thread for plotting
-                seg_plot.plot_signaller.plot_update.emit(hull_3d, seg_plot.all_hulls_3d, seg_plot.quaternions)
+                seg_plot.plot_signaller.plot_update.emit(hull_3d, seg_plot.all_hulls_3d)
         except Exception as e:
             seg_plot.logger.error(e)
 
@@ -479,7 +479,7 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     QtCore.QCoreApplication.postEvent(signaller, evt)
     return
 
-def plot_update_handler(hull_3d, all_hulls_3d, quaternions):
+def plot_update_handler(hull_3d, all_hulls_3d):
     if not seg_plot.plot_initialized:
         plt.ion()
         seg_plot.fig = plt.figure(figsize=(10, 10))
