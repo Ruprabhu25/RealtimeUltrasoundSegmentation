@@ -478,9 +478,9 @@ def plot_update_handler(hull_3d, all_hulls_3d):
         plt.ion()
         seg_plot.fig = plt.figure(figsize=(10, 10))
         seg_plot.ax = seg_plot.fig.add_subplot(111, projection="3d")
-        seg_plot.ax.set_xlim(-1.0, 1.0)
-        seg_plot.ax.set_ylim(-1.0, 1.0)
-        seg_plot.ax.set_zlim(-1.0, 1.0)
+        seg_plot.ax.set_xlim(-0.5, 0.5)
+        seg_plot.ax.set_ylim(-0.5, 0.5)
+        seg_plot.ax.set_zlim(-0.5, 0.5)
         seg_plot.plot_initialized = True
 
     update_plot_with_new_frame(seg_plot.ax, hull_3d, all_hulls_3d)

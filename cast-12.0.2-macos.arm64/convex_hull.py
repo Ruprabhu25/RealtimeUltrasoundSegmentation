@@ -25,9 +25,8 @@ def get_rotation_center(quat):
     rotation = R.from_quat(quat)
     center = rotation.apply(
         np.array([[1, 0, 0]])
-    )  # Assuming a unit vector for the center
-    # print(f"rotation: {rotation}")
-    # print(f"center: {center}")
+    )
+    print(f"Rotation: {rotation}, Center: {center}")
     return rotation, center
 
 
