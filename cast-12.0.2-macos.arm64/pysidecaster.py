@@ -10,7 +10,7 @@ from typing import Final
 from PIL import Image
 import torch
 import numpy as np
-from us_unet2 import MultiHeadUNet
+from model.us_unet2 import MultiHeadUNet
 import cv2
 import matplotlib.pyplot as plt
 import pyclariuscast
@@ -46,7 +46,7 @@ CMD_CFI_MODE: Final = 14
 from PySide6.QtCore import QObject, Signal
 
 class PlotSignaller(QObject):
-    plot_update = Signal(object, object, object)  # hull_3d, all_hulls_3d, quaternions
+    plot_update = Signal(object, object)  # hull_3d, all_hulls_3d
 
 # custom event for handling change in freeze state
 class FreezeEvent(QtCore.QEvent):
@@ -358,22 +358,7 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
         img_pil = Image.frombytes("L", (width, height), image)
     try:
         if seg_plot.segment_image:
-            img_np = np.array(img_pil)
-            img_resized = cv2.resize(
-                img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA
-            )
-            img_resized = img_resized[:, :, :3]
-
-            img_resized = np.dot(img_resized, [0.299, 0.587, 0.114])
-
-            img_resized = img_resized.reshape(128, 128, 1)
-            img_resized = torch.from_numpy(img_resized.astype(np.float32)).unsqueeze(0)
-            img_resized = img_resized.permute(0, 3, 1, 2)
-            with torch.no_grad():
-                _, pred = seg_plot.model(img_resized)
-                pred = pred.squeeze(0).numpy()
-
-            pred_img = Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
+            pred, pred_img = segment_image(img_pil, image_size)
         try:
             if seg_plot.save_results:
                 seg_plot.quaternions = pd.concat(
@@ -399,75 +384,12 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                 seg_plot.frame_num += 1
 
             if seg_plot.plot:
-                quat = [imu[0].qx, imu[0].qy, imu[0].qz, imu[0].qw]
-                print(quat)            
-                # Skip if quaternion hasn't changed significantly
-                if seg_plot.last_quat is not None:
-                    angle = quaternion_distance(quat, seg_plot.last_quat)
-                    #print(angle)
-                    if angle < MIN_ROTATION_RAD:
-                        print(f"Skipped frame due to min threshold: Δangle={np.degrees(angle):.2f}°")
-                        return
-                    if angle > MAX_ROTATION_RAD:
-                        print(f"Skipped frame due to max threshold: Δangle={np.degrees(angle):.2f}°")
-                        return
-                if seg_plot.frame_num % 10 != 0:
-                    return
-
-                rot, center = get_rotation_center(quat)
-                print(f"quat: {quat}, rot: {rot}, center: {center}")
-
-                hull_3d = extract_3d_hull_from_image(
-                    np.array(pred_img.convert("L")), rot, center
-                )
-
-                # Update last_quat
-                seg_plot.last_quat = quat
-                # Emit signal to main thread for plotting
-                seg_plot.plot_signaller.plot_update.emit(hull_3d, seg_plot.all_hulls_3d)
+                plot_frame(imu, pred_img)
         except Exception as e:
             seg_plot.logger.error(e)
 
         if seg_plot.segment_image:
-            # img_qt_resized = QtGui.QImage(
-            #     (pred * 255).astype(np.uint8).copy(),
-            #     image_size[1],
-            #     image_size[0],
-            #     image_size[1],
-            #     QtGui.QImage.Format_Grayscale8,
-            # )
-
-            ### experimental: composite the segmentation mask on the original image
-            # Resize original grayscale image to match segmentation output size
-            img_original_resized = img_pil.convert("RGB").resize(image_size)
-
-            # Create a transparent blue mask from the prediction
-            seg_mask = (pred * 255).astype(np.uint8)
-            blue_overlay = np.zeros((128, 128, 4), dtype=np.uint8)
-            blue_overlay[..., 2] = 255  # full blue
-            blue_overlay[..., 3] = (seg_mask * 0.5).astype(np.uint8)  # alpha: 0–128
-
-            # Convert both to PIL
-            original_img = img_original_resized.convert("RGBA")
-            overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
-
-            # Composite the overlay on top of the original image
-            composited = Image.alpha_composite(original_img, overlay_img)
-
-            # Combine (side by side) the composited image and the original image
-            final_display = Image.new("RGBA", (128 * 2, 128))
-            final_display.paste(composited, (0, 0))
-            final_display.paste(original_img, (128, 0))
-
-            # Convert to QImage for display
-            img_qt_resized = QtGui.QImage(
-                final_display.tobytes("raw", "RGBA"),
-                final_display.size[0],
-                final_display.size[1],
-                final_display.size[0] * 4,
-                QtGui.QImage.Format_RGBA8888,
-            )
-            ### end of experimental
+            img_qt_resized = display_segmented_image(img_pil, image_size, pred)
         else:
             img_qt_resized = img_qt
     except Exception as e:
@@ -478,6 +400,78 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     evt = ImageEvent()
     QtCore.QCoreApplication.postEvent(signaller, evt)
     return
+
+def plot_frame(imu, pred_img):
+    quat = [imu[0].qx, imu[0].qy, imu[0].qz, imu[0].qw]
+    # Skip if quaternion hasn't changed significantly
+    if seg_plot.last_quat is not None:
+        angle = quaternion_distance(quat, seg_plot.last_quat)
+        if angle < MIN_ROTATION_RAD:
+            print(f"Skipped frame due to min threshold: Δangle={np.degrees(angle):.2f}°")
+            return
+        if angle > MAX_ROTATION_RAD:
+            print(f"Skipped frame due to max threshold: Δangle={np.degrees(angle):.2f}°")
+            return
+    if seg_plot.frame_num % 5 == 0:
+        rot, center = get_rotation_center(quat)
+
+        hull_3d = extract_3d_hull_from_image(
+            np.array(pred_img.convert("L")), rot, center
+        )
+
+        # Update last_quat
+        seg_plot.last_quat = quat
+        # Emit signal to main thread for plotting
+        seg_plot.plot_signaller.plot_update.emit(hull_3d, seg_plot.all_hulls_3d)
+
+def segment_image(img_pil, image_size):
+    img_np = np.array(img_pil)
+    img_resized = cv2.resize(
+        img_np, (image_size[1], image_size[0]), interpolation=cv2.INTER_AREA
+    )
+    img_resized = img_resized[:, :, :3]
+
+    img_resized = np.dot(img_resized, [0.299, 0.587, 0.114])
+
+    img_resized = img_resized.reshape(128, 128, 1)
+    img_resized = torch.from_numpy(img_resized.astype(np.float32)).unsqueeze(0)
+    img_resized = img_resized.permute(0, 3, 1, 2)
+    with torch.no_grad():
+        _, pred = seg_plot.model(img_resized)
+        pred = pred.squeeze(0).numpy()
+
+    return pred, Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
+
+def display_segmented_image(img_pil, image_size, pred):
+    # Resize original grayscale image to match segmentation output size
+    img_original_resized = img_pil.convert("RGB").resize(image_size)
+
+    # Create a transparent blue mask from the prediction
+    seg_mask = (pred * 255).astype(np.uint8)
+    blue_overlay = np.zeros((128, 128, 4), dtype=np.uint8)
+    blue_overlay[..., 2] = 255  # full blue
+    blue_overlay[..., 3] = (seg_mask * 0.5).astype(np.uint8)  # alpha: 0–128
+
+    # Convert both to PIL
+    original_img = img_original_resized.convert("RGBA")
+    overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
+
+    # Composite the overlay on top of the original image
+    composited = Image.alpha_composite(original_img, overlay_img)
+
+    # Combine (side by side) the composited image and the original image
+    final_display = Image.new("RGBA", (128 * 2, 128))
+    final_display.paste(composited, (0, 0))
+    final_display.paste(original_img, (128, 0))
+
+    # Convert to QImage for display
+    return QtGui.QImage(
+        final_display.tobytes("raw", "RGBA"),
+        final_display.size[0],
+        final_display.size[1],
+        final_display.size[0] * 4,
+        QtGui.QImage.Format_RGBA8888,
+    )
 
 def plot_update_handler(hull_3d, all_hulls_3d):
     if not seg_plot.plot_initialized:
