@@ -157,6 +157,8 @@ class MainWidget(QtWidgets.QMainWindow):
         saveImage = QtWidgets.QPushButton("Save Local")
         bMode = QtWidgets.QPushButton("B Mode")
         cfiMode = QtWidgets.QPushButton("Color Mode")
+        segmentBtn = QtWidgets.QPushButton("Segment Image")
+        plotBtn = QtWidgets.QPushButton("Plot")
 
         # try to connect/disconnect to/from the probe
         def tryConnect():
@@ -231,6 +233,18 @@ class MainWidget(QtWidgets.QMainWindow):
             if cast.isConnected():
                 cast.userFunction(CMD_CFI_MODE, 0)
 
+        def trySegmentImage():
+            seg_plot.segment_image = True
+            seg_plot.plot = False
+            self.statusBar().showMessage("Segmenting image...")
+
+        def tryPlot():
+            if seg_plot.segment_image is True:
+                seg_plot.plot = True
+                self.statusBar().showMessage("Plotting...")
+            else:
+                self.statusBar().showMessage("Press the Segment Image button first")
+
         conn.clicked.connect(tryConnect)
         self.run.clicked.connect(tryFreeze)
         quit.clicked.connect(self.shutdown)
@@ -243,6 +257,8 @@ class MainWidget(QtWidgets.QMainWindow):
         saveImage.clicked.connect(trySaveImage)
         bMode.clicked.connect(tryBMode)
         cfiMode.clicked.connect(tryCfiMode)
+        segmentBtn.clicked.connect(trySegmentImage)
+        plotBtn.clicked.connect(tryPlot)
 
         # add widgets to layout
         self.img = ImageView(cast)
@@ -278,6 +294,10 @@ class MainWidget(QtWidgets.QMainWindow):
         layout.addLayout(modelayout)
         modelayout.addWidget(bMode)
         modelayout.addWidget(cfiMode)
+
+        # Add new buttons to layout
+        layout.addWidget(segmentBtn)
+        layout.addWidget(plotBtn)
 
         # connect signals
         signaller.freeze.connect(self.freeze)
@@ -600,10 +620,10 @@ class SegmentationPlot:
 
     def __post_init__(self):
         # if saving results, create directories for images and positions
+        self.images_path = os.path.join(self.base_dir, "images")
         if self.save_results:
             self.frame_num = 0
             self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-            self.images_path = os.path.join(self.base_dir, "images")
             os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
             self.positions_path = os.path.join(self.base_dir, "positions")
             os.makedirs(self.positions_path, exist_ok=True)
@@ -656,15 +676,6 @@ def parse_args():
         help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
     parser.add_argument(
-        "--plot",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--segment-image",
-        action="store_true",
-        help="Whether to segment the image",
-    )
-    parser.add_argument(
         "--model-file",
         type=str,
         default="best_mhu-2.pth",
@@ -672,15 +683,15 @@ def parse_args():
     )
 
     args = parser.parse_args()
-    return args.device, args.save_results, args.log_level, args.plot, args.segment_image
+    return args.device, args.save_results, args.log_level
 
 
 ## main function
 def main():
-    device, save_results, log_level, plot, segment_image = parse_args()
+    device, save_results, log_level = parse_args()
     global seg_plot
     seg_plot = SegmentationPlot(
-        device=device, save_results=save_results, log_level=log_level, plot=plot, segment_image=segment_image
+        device=device, save_results=save_results, log_level=log_level
     )
     plot_signaller = PlotSignaller()
     plot_signaller.plot_update.connect(plot_update_handler)
