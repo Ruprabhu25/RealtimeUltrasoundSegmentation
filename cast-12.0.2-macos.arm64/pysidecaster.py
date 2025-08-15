@@ -442,11 +442,21 @@ def segment_image(img_pil, image_size):
 
     return pred, Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
 
-def display_segmented_image(img_pil, image_size, pred):
+def display_segmented_image(img_pil, image_size, pred: np.ndarray):
     # Resize original grayscale image to match segmentation output size
     img_original_resized = img_pil.convert("RGB").resize(image_size)
 
     # Create a transparent blue mask from the prediction
+    # img_colored = apply_colormap(pred, cmap_name="plasma")
+    # img_colored.show()
+    # time.sleep(1000)
+    try:
+        print(pred)
+        print(pred.shape)
+    except:
+        print("cant print dims")
+    pred = pred.squeeze(0)
+    #pred_thresholded = np.where(pred < 0.9, 0, 1)
     seg_mask = (pred * 255).astype(np.uint8)
     blue_overlay = np.zeros((128, 128, 4), dtype=np.uint8)
     blue_overlay[..., 2] = 255  # full blue
@@ -455,6 +465,14 @@ def display_segmented_image(img_pil, image_size, pred):
     # Convert both to PIL
     original_img = img_original_resized.convert("RGBA")
     overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
+
+    # Mask overlay: only blue where ultrasound border mask is white
+    border_mask_np = np.array(seg_plot.ultrasound_border_mask)
+    overlay_np = np.array(overlay_img)
+    white_pixels = np.all(border_mask_np[..., :3] == 255, axis=-1)
+    # Set blue only where mask is white, else transparent
+    overlay_np[~white_pixels] = [0, 0, 0, 0]
+    overlay_img = Image.fromarray(overlay_np, mode="RGBA")
 
     # Composite the overlay on top of the original image
     composited = Image.alpha_composite(original_img, overlay_img)
@@ -538,6 +556,34 @@ def buttonsFn(button, clicks):
     QtCore.QCoreApplication.postEvent(signaller, evt)
     return
 
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
+
+def apply_colormap(matrix, cmap_name="viridis"):
+    """
+    Convert a float matrix (H x W) to an RGB image using a matplotlib colormap.
+    """
+    # Normalize values between 0 and 1
+    normed = (matrix - np.min(matrix)) / (np.ptp(matrix) + 1e-8)
+
+    # Get the colormap
+    cmap = plt.get_cmap(cmap_name)
+
+    # Apply the colormap (returns RGBA)
+    colored = cmap(normed)  # shape: (H, W, 4)
+
+    # Convert to uint8 RGB
+    rgb_image = (colored[:, :, :3] * 255).astype(np.uint8)
+
+    return Image.fromarray(rgb_image)
+
+# # Example usage
+# matrix = np.random.rand(128, 128)  # your float matrix
+# img_colored = apply_colormap(matrix, cmap_name="plasma")
+# img_colored.show()
+
+
 @dataclass
 class SegmentationPlot:
     device: str = "cpu"  # device to run the model on
@@ -546,10 +592,11 @@ class SegmentationPlot:
     plot: bool = True # whether to plot image or not
     segment_image: bool = True  # whether to segment the image
     base_dir: str = os.getcwd()  # base directory for saving results
-    model_file: str = "best_mhu.pth"  # model file name
+    model_file: str = "best_mhu-2.pth"  # model file name
     plot_signaller: PlotSignaller = None  # signaller for plot updates
-    last_quat: list | None = None
+    last_quat: list = None
     frame_num: int = 0
+
 
     def __post_init__(self):
         # if saving results, create directories for images and positions
@@ -587,6 +634,9 @@ class SegmentationPlot:
             f"SegmentationPlot initialized with device={self.device}, save_results={self.save_results}, log_level={self.log_level}"
         )
 
+        # load border image from file and convert to RGBA
+        self.ultrasound_border_mask = Image.open(f"{self.images_path}/ultrasound_mask.png").convert("RGBA")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="PyClariusCast")
@@ -613,6 +663,12 @@ def parse_args():
         "--segment-image",
         action="store_true",
         help="Whether to segment the image",
+    )
+    parser.add_argument(
+        "--model-file",
+        type=str,
+        default="best_mhu-2.pth",
+        help="Path to the model file",
     )
 
     args = parser.parse_args()
