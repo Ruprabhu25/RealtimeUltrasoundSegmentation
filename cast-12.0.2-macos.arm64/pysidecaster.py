@@ -464,17 +464,17 @@ def segment_image(img_pil, image_size):
 
 def display_segmented_image(img_pil, image_size, pred: np.ndarray):
     # Resize original grayscale image to match segmentation output size
-    img_original_resized = img_pil.convert("RGB").resize(image_size)
+    img_original_resized = img_pil.convert("RGBA").resize(image_size)
 
     # Create a transparent blue mask from the prediction
     # img_colored = apply_colormap(pred, cmap_name="plasma")
     # img_colored.show()
     # time.sleep(1000)
-    try:
-        print(pred)
-        print(pred.shape)
-    except:
-        print("cant print dims")
+    # try:
+    #     print(pred)
+    #     print(pred.shape)
+    # except:
+    #     print("cant print dims")
     pred = pred.squeeze(0)
     #pred_thresholded = np.where(pred < 0.9, 0, 1)
     seg_mask = (pred * 255).astype(np.uint8)
@@ -484,18 +484,22 @@ def display_segmented_image(img_pil, image_size, pred: np.ndarray):
 
     # Convert both to PIL
     original_img = img_original_resized.convert("RGBA")
-    overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
+    print("previous code")
 
     # Mask overlay: only blue where ultrasound border mask is white
-    border_mask_np = np.array(seg_plot.ultrasound_border_mask)
-    overlay_np = np.array(overlay_img)
+    border_mask_np = np.array(seg_plot.ultrasound_border_mask.resize((128, 128), Image.Resampling.BILINEAR))
     white_pixels = np.all(border_mask_np[..., :3] == 255, axis=-1)
+    print("get border map and pixels")
     # Set blue only where mask is white, else transparent
-    overlay_np[~white_pixels] = [0, 0, 0, 0]
-    overlay_img = Image.fromarray(overlay_np, mode="RGBA")
+    print("overlay shape: ", blue_overlay.shape, "mask shape: ", white_pixels.shape)
+    blue_overlay[~white_pixels] = [0, 0, 0, 0]
+    print("masked the overlay")
+    overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
+    print("created the overlay image")
 
     # Composite the overlay on top of the original image
     composited = Image.alpha_composite(original_img, overlay_img)
+    print("composited the images")
 
     # Combine (side by side) the composited image and the original image
     final_display = Image.new("RGBA", (128 * 2, 128))
