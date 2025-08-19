@@ -454,7 +454,7 @@ def segment_image(img_pil, image_size):
     img_resized = np.dot(img_resized, [0.299, 0.587, 0.114])
 
     img_resized = img_resized.reshape(128, 128, 1)
-    img_resized = torch.from_numpy(img_resized.astype(np.float32)).unsqueeze(0)
+    img_resized = torch.from_numpy(img_resized.astype(np.float32)/255.0).unsqueeze(0)
     img_resized = img_resized.permute(0, 3, 1, 2)
     with torch.no_grad():
         _, pred = seg_plot.model(img_resized)
@@ -475,35 +475,65 @@ def display_segmented_image(img_pil, image_size, pred: np.ndarray):
     #     print(pred.shape)
     # except:
     #     print("cant print dims")
+    # Scale prediction mask to 0–255
     pred = pred.squeeze(0)
     #pred_thresholded = np.where(pred < 0.9, 0, 1)
+
     seg_mask = (pred * 255).astype(np.uint8)
+
+    # Create blue overlay with transparency based on seg_mask
     blue_overlay = np.zeros((128, 128, 4), dtype=np.uint8)
     blue_overlay[..., 2] = 255  # full blue
-    blue_overlay[..., 3] = (seg_mask * 0.5).astype(np.uint8)  # alpha: 0–128
+    blue_overlay[..., 3] = (seg_mask * 0.3).astype(np.uint8)  # alpha: 0–128
 
-    # Convert both to PIL
+    # Convert original image to RGBA
     original_img = img_original_resized.convert("RGBA")
     print("previous code")
 
     # Mask overlay: only blue where ultrasound border mask is white
-    border_mask_np = np.array(seg_plot.ultrasound_border_mask.resize((128, 128), Image.Resampling.BILINEAR))
+    border_mask_np = np.array(
+        seg_plot.ultrasound_border_mask.resize((128, 128), Image.Resampling.BILINEAR)
+    )
     white_pixels = np.all(border_mask_np[..., :3] == 255, axis=-1)
     print("get border map and pixels")
-    # Set blue only where mask is white, else transparent
+
+    # Apply mask
     print("overlay shape: ", blue_overlay.shape, "mask shape: ", white_pixels.shape)
     blue_overlay[~white_pixels] = [0, 0, 0, 0]
     print("masked the overlay")
-    overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
-    print("created the overlay image")
 
-    # Composite the overlay on top of the original image
-    composited = Image.alpha_composite(original_img, overlay_img)
+    # ----------- Contour extraction & drawing -----------
+    # Threshold prediction for contours
+    pred_binary = (pred > 0.5).astype(np.uint8) * 255
+
+    # Find contours
+    contours, hierarchy = cv2.findContours(
+        pred_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+    )
+
+    # Draw contours on black BGR image
+    tmp = np.zeros((128, 128, 3), dtype=np.uint8)
+    border = cv2.drawContours(tmp, contours, -1, (0, 0, 255), 1)
+    print("border shape:", border.shape)
+
+    # Create boolean mask of red contour pixels
+    red_border_mask = np.all(border == [0, 0, 255], axis=-1)
+
+    # Paint those pixels red with full opacity in blue_overlay
+    blue_overlay[red_border_mask] = [255, 255, 0, 255]
+    print("bordered the overlay")
+
+    # ----------- Final blending -----------
+    # Convert blue_overlay (numpy) to PIL
+    blue_overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
+
+    # Composite overlays onto original image
+    combined = Image.alpha_composite(original_img, blue_overlay_img)
     print("composited the images")
 
     # Combine (side by side) the composited image and the original image
     final_display = Image.new("RGBA", (128 * 2, 128))
-    final_display.paste(composited, (0, 0))
+    final_display.paste(combined, (0, 0))
     final_display.paste(original_img, (128, 0))
 
     # Convert to QImage for display
@@ -613,8 +643,8 @@ class SegmentationPlot:
     device: str = "cpu"  # device to run the model on
     save_results: bool = False  # whether to save results
     log_level: str = "DEBUG"  # logging level
-    plot: bool = True # whether to plot image or not
-    segment_image: bool = True  # whether to segment the image
+    plot: bool = False # whether to plot image or not
+    segment_image: bool = False  # whether to segment the image
     base_dir: str = os.getcwd()  # base directory for saving results
     model_file: str = "best_mhu-2.pth"  # model file name
     plot_signaller: PlotSignaller = None  # signaller for plot updates
