@@ -10,6 +10,8 @@ from scipy.interpolate import interp1d
 from dotenv import load_dotenv
 import cv2
 from scipy.spatial.transform import Rotation as R
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import numpy as np
 
 from math import radians
 
@@ -150,14 +152,6 @@ def extract_3d_hull_from_image(img, rotation, center=None, size=0.5, white_thres
     return anchored_hull
 
 
-# debugging
-def visualize_contours(img, contour):
-    vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    cv2.drawContours(vis, [contour], -1, (0, 255, 0), 2)
-    plt.imshow(vis)
-    plt.title("Selected Contour")
-    plt.axis("off")
-    plt.show()
 
 def stitch_and_plot_hulls(ax, all_hulls_3d, target_points=25):
     smoothed_hulls = []
@@ -202,6 +196,28 @@ def stitch_and_plot_hulls(ax, all_hulls_3d, target_points=25):
     ax.add_collection3d(top_face)
 
 
+def add_shaded_quad(ax, quad, light_dir=np.array([1, 1, 0.5])):
+    """Add a quad to the 3D plot with simple Lambertian shading."""
+    # Normalize light vector
+    light_dir = light_dir / np.linalg.norm(light_dir)
+
+    # Compute normal of the quad
+    v1 = quad[1] - quad[0]
+    v2 = quad[2] - quad[0]
+    normal = np.cross(v1, v2)
+    normal = normal / np.linalg.norm(normal)
+
+    # Lambertian shading (dot product with light direction)
+    intensity = np.dot(normal, light_dir)
+    intensity = max(intensity, 0)  # no negative lighting
+
+    # Base color (lightpink) adjusted by intensity
+    base_color = np.array([1.0, 0.71, 0.76])  # RGB for lightpink
+    shaded_color = np.clip(base_color * intensity + 0.2, 0, 1)  # add ambient term
+
+    side = Poly3DCollection([quad], facecolors=[shaded_color], edgecolors="none", alpha=1)
+    ax.add_collection3d(side)
+
 
 def update_plot_with_new_frame(ax, hull_3d, all_hulls_3d, target_points=25):
     """Update the plot with a new quaternion, center, and image frame."""
@@ -217,10 +233,7 @@ def update_plot_with_new_frame(ax, hull_3d, all_hulls_3d, target_points=25):
             p1, p2 = h1[j], h1[(j + 1) % target_points]
             q2, q1 = h2[(j + 1) % target_points], h2[j]
             quad = np.array([p1, p2, q2, q1])
-            side = Poly3DCollection(
-                [quad], facecolors="lightpink", edgecolors="none", alpha=1
-            )
-            ax.add_collection3d(side)
+            add_shaded_quad(ax, quad, light_dir=np.array([1, 1, 0.5]))  # <--- lighting
 
     all_hulls_3d.append(hull_3d)
 
@@ -262,7 +275,28 @@ def main():
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection="3d")
 
-    stitch_and_plot_hulls(ax, all_hulls_3d, target_points=50)
+    # --- Smooth + interpolate hulls ---
+    target_points = 50
+    smoothed_hulls = [interpolate_hull(h, target_points) for h in all_hulls_3d]
+
+    # --- Connect consecutive hulls with shaded quads ---
+    for i in range(len(smoothed_hulls) - 1):
+        h1 = smoothed_hulls[i]
+        h2 = smoothed_hulls[i + 1]
+        h2 = align_hull_to_reference(h2, h1)
+
+        for j in range(target_points):
+            p1, p2 = h1[j], h1[(j + 1) % target_points]
+            q2, q1 = h2[(j + 1) % target_points], h2[j]
+            quad = np.array([p1, p2, q2, q1])
+            add_shaded_quad(ax, quad, light_dir=np.array([1, 1, 0.5]))
+
+    # --- Cap bottom and top with shading ---
+    bottom = smoothed_hulls[0]
+    top = smoothed_hulls[-1]
+
+    add_shaded_quad(ax, bottom, light_dir=np.array([1, 1, 0.5]))
+    add_shaded_quad(ax, top[::-1], light_dir=np.array([1, 1, 0.5]))
 
     # Finalize plot
     ax.set_box_aspect([1, 1, 1])

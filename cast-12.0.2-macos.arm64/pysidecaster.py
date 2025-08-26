@@ -26,7 +26,8 @@ from convex_hull import (
     update_plot_with_new_frame,
     quaternion_distance,
     MIN_ROTATION_RAD,
-    MAX_ROTATION_RAD
+    MAX_ROTATION_RAD,
+    add_shaded_quad,
 )
 from dataclasses import dataclass
 from logging import getLogger
