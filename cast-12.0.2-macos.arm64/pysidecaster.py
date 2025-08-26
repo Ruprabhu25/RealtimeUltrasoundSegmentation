@@ -19,6 +19,7 @@ from PySide6.QtCore import Slot
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from matplotlib.colors import LightSource
 from convex_hull import (
     extract_3d_hull_from_image,
     get_rotation_center,
@@ -404,7 +405,8 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                 seg_plot.frame_num += 1
 
             if seg_plot.plot:
-                plot_frame(imu, pred_img)
+                pred_img_resized = pred_img.resize((width, height))
+                plot_frame(imu, pred_img_resized)
         except Exception as e:
             seg_plot.logger.error(e)
 
@@ -550,9 +552,13 @@ def plot_update_handler(hull_3d, all_hulls_3d):
         plt.ion()
         seg_plot.fig = plt.figure(figsize=(10, 10))
         seg_plot.ax = seg_plot.fig.add_subplot(111, projection="3d")
-        seg_plot.ax.set_xlim(-0.5, 0.5)
-        seg_plot.ax.set_ylim(-0.5, 0.5)
-        seg_plot.ax.set_zlim(-0.5, 0.5)
+        seg_plot.ax.set_box_aspect((1, 5, 5))
+        seg_plot.ax.set_xlim(-0.25, 0.25)
+        seg_plot.ax.set_ylim(-0.25, 0.25)
+        seg_plot.ax.set_zlim(-0.25, 0.25)
+        seg_plot.ax.set_xlabel("X-axis")
+        seg_plot.ax.set_ylabel("Y-axis")
+        seg_plot.ax.set_zlabel("Z-axis")
         seg_plot.plot_initialized = True
 
     update_plot_with_new_frame(seg_plot.ax, hull_3d, all_hulls_3d)

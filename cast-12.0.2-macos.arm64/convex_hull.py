@@ -160,9 +160,13 @@ def visualize_contours(img, contour):
     plt.show()
 
 def stitch_and_plot_hulls(ax, all_hulls_3d, target_points=25):
-    for i in range(len(all_hulls_3d) - 1):
-        h1 = interpolate_hull(all_hulls_3d[i], target_points)
-        h2 = interpolate_hull(all_hulls_3d[i + 1], target_points)
+    smoothed_hulls = []
+    for hull in all_hulls_3d:
+        smoothed_hulls.append(interpolate_hull(hull, target_points))
+
+    for i in range(len(smoothed_hulls) - 1):
+        h1 = smoothed_hulls[i]
+        h2 = smoothed_hulls[i + 1]
         h2 = align_hull_to_reference(h2, h1)
 
         for j in range(target_points):
@@ -170,9 +174,33 @@ def stitch_and_plot_hulls(ax, all_hulls_3d, target_points=25):
             q2, q1 = h2[(j + 1) % target_points], h2[j]
             quad = np.array([p1, p2, q2, q1])
             side = Poly3DCollection(
-                [quad], facecolors="lightblue", edgecolors="k", alpha=0.8
+                [quad],
+                facecolors="lightblue",
+                edgecolors="none",   # no black edges
+                alpha=0.8
             )
             ax.add_collection3d(side)
+
+    # -------- Cap the bottom (first hull) --------
+    bottom = smoothed_hulls[0]
+    bottom_face = Poly3DCollection(
+        [bottom],
+        facecolors="lightblue",
+        edgecolors="none",
+        alpha=0.8
+    )
+    ax.add_collection3d(bottom_face)
+
+    # -------- Cap the top (last hull) --------
+    top = smoothed_hulls[-1]
+    top_face = Poly3DCollection(
+        [top[::-1]],  # reverse orientation so normal faces outward
+        facecolors="lightblue",
+        edgecolors="none",
+        alpha=0.8
+    )
+    ax.add_collection3d(top_face)
+
 
 
 def update_plot_with_new_frame(ax, hull_3d, all_hulls_3d, target_points=25):
@@ -190,7 +218,7 @@ def update_plot_with_new_frame(ax, hull_3d, all_hulls_3d, target_points=25):
             q2, q1 = h2[(j + 1) % target_points], h2[j]
             quad = np.array([p1, p2, q2, q1])
             side = Poly3DCollection(
-                [quad], facecolors="lightpink", edgecolors="k", alpha=0.5
+                [quad], facecolors="lightpink", edgecolors="none", alpha=1
             )
             ax.add_collection3d(side)
 
