@@ -1,7 +1,7 @@
 *.pyc
 *.iso
 **/__pycache__
-**/images/
+**/images/2025*
 # **/positions/
 **/.DS_Store
 **/.idea
