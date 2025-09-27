@@ -10,6 +10,7 @@ from typing import Final
 from PIL import Image
 import torch
 import numpy as np
+from scipy.interpolate import splprep, splev
 from model.us_unet2 import MultiHeadUNet
 import cv2
 import matplotlib.pyplot as plt
@@ -28,6 +29,7 @@ from convex_hull import (
     MIN_ROTATION_RAD,
     MAX_ROTATION_RAD,
     add_shaded_quad,
+    find_probe_tip
 )
 from dataclasses import dataclass
 from logging import getLogger
@@ -465,6 +467,22 @@ def segment_image(img_pil, image_size):
 
     return pred, Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
 
+def smooth_mask_morph(mask, radius=4, cycles=1, order="open-close"):
+    if mask.dtype == np.uint8:
+        m = np.ascontiguousarray(mask)
+    else:
+        m = (mask > 0.5).astype(np.uint8, copy=False) * 255
+
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*radius+1, 2*radius+1))
+
+    if order == "open-close":
+        out = cv2.morphologyEx(m, cv2.MORPH_OPEN,  k, iterations=cycles)
+        out = cv2.morphologyEx(out, cv2.MORPH_CLOSE, k, iterations=cycles)
+    else:
+        out = cv2.morphologyEx(m, cv2.MORPH_CLOSE, k, iterations=cycles)
+        out = cv2.morphologyEx(out, cv2.MORPH_OPEN,  k, iterations=cycles)
+    return out
+
 def display_segmented_image(img_pil, image_size, pred: np.ndarray):
     # Resize original grayscale image to match segmentation output size
     img_original_resized = img_pil.convert("RGBA").resize(image_size)
@@ -507,16 +525,27 @@ def display_segmented_image(img_pil, image_size, pred: np.ndarray):
 
     # ----------- Contour extraction & drawing -----------
     # Threshold prediction for contours
-    pred_binary = (pred > 0.5).astype(np.uint8) * 255
+
+    pred_smoothed = smooth_mask_morph(pred)    
+    # pred_binary = (pred > 0.5).astype(np.uint8) * 255
 
     # Find contours
     contours, hierarchy = cv2.findContours(
-        pred_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+        pred_smoothed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
     )
+
+    print("number of contours found: ", len(contours))
+
+    valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
+    if not valid_contours:
+        return None
+
+    largest_contour = max(valid_contours, key=cv2.contourArea)
+    print("largest contour size: ", cv2.contourArea(largest_contour))
 
     # Draw contours on black BGR image
     tmp = np.zeros((128, 128, 3), dtype=np.uint8)
-    border = cv2.drawContours(tmp, contours, -1, (0, 0, 255), 1)
+    border = cv2.drawContours(tmp, largest_contour, -1, (0, 0, 255), 1)
     print("border shape:", border.shape)
 
     # Create boolean mask of red contour pixels
@@ -553,7 +582,7 @@ def plot_update_handler(hull_3d, all_hulls_3d):
         plt.ion()
         seg_plot.fig = plt.figure(figsize=(10, 10))
         seg_plot.ax = seg_plot.fig.add_subplot(111, projection="3d")
-        seg_plot.ax.set_box_aspect((1, 5, 5))
+        seg_plot.ax.set_box_aspect([1, 1, 1])
         seg_plot.ax.set_xlim(-0.25, 0.25)
         seg_plot.ax.set_ylim(-0.25, 0.25)
         seg_plot.ax.set_zlim(-0.25, 0.25)
@@ -657,6 +686,7 @@ class SegmentationPlot:
     plot_signaller: PlotSignaller = None  # signaller for plot updates
     last_quat: list = None
     frame_num: int = 0
+    ultrasound_border_mask: Image = Image.open('images/ultrasound_mask.png')
 
 
     def __post_init__(self):
@@ -696,7 +726,8 @@ class SegmentationPlot:
         )
 
         # load border image from file and convert to RGBA
-        self.ultrasound_border_mask = Image.open(f"{self.images_path}/ultrasound_mask.png").convert("RGBA")
+        # self.ultrasound_border_mask = Image.open(f"{self.images_path}/ultrasound_mask.png").convert("RGBA")
+
 
 
 def parse_args():
