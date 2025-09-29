@@ -69,3 +69,9 @@ cd ~/RealtimeUltrasoundSegmentation/cast-12.0.2-macos.x86_64
 python pysidecaster.py
 ```
 
+
+- TODO:
+- figure out how to skip frames: or every N frames we can pass an image into the model
+- debug windows 10
+- determine if pysidecaster works on windows 11
+

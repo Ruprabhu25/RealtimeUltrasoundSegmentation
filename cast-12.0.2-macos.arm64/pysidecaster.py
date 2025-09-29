@@ -159,19 +159,25 @@ class MainWidget(QtWidgets.QMainWindow):
         saveImage = QtWidgets.QPushButton("Save Local")
         bMode = QtWidgets.QPushButton("B Mode")
         cfiMode = QtWidgets.QPushButton("Color Mode")
-        segmentBtn = QtWidgets.QPushButton("Segment Image")
-        plotBtn = QtWidgets.QPushButton("Plot")
+        segmentBtn = QtWidgets.QCheckBox("Segment Image")
+        plotBtn = QtWidgets.QCheckBox("Plot")
+        modelFile = QtWidgets.QLineEdit(text="mhu_blank.pth", placeholderText="Model File name")
+        saveResults = QtWidgets.QCheckBox("Save Results")
 
         # try to connect/disconnect to/from the probe
         def tryConnect():
-            try:
-                seg_plot.frame_num = 0
-            except Exception as e:
-                seg_plot.logger.error(e)
             if not cast.isConnected():
                 if cast.connect(ip.text(), int(port.text()), "research"):
                     self.statusBar().showMessage("Connected")
                     conn.setText("Disconnect")
+                    try:
+                        seg_plot.frame_num = 0
+                        seg_plot.save_results = saveResults.isChecked()
+                        print(f"saveresults is checked? {seg_plot.save_results} {saveResults.isChecked()}")
+                        seg_plot.model_file = modelFile.text()
+                        seg_plot.initialize()
+                    except Exception as e:
+                        seg_plot.logger.error(e)
                 else:
                     self.statusBar().showMessage(
                         "Failed to connect to {0}".format(ip.text())
@@ -236,16 +242,21 @@ class MainWidget(QtWidgets.QMainWindow):
                 cast.userFunction(CMD_CFI_MODE, 0)
 
         def trySegmentImage():
-            seg_plot.segment_image = True
-            seg_plot.plot = False
-            self.statusBar().showMessage("Segmenting image...")
+            if seg_plot.segment_image:
+                seg_plot.segment_image = False
+                self.statusBar().showMessage("Stopped segmenting image")
+            else:
+                seg_plot.segment_image = True
+                self.statusBar().showMessage("Segmenting image...")
 
         def tryPlot():
-            if seg_plot.segment_image is True:
+            if seg_plot.plot:
+                seg_plot.plot = False
+                self.statusBar().showMessage("Stopped Plotting")
+            else:
+                seg_plot.segment_image = True
                 seg_plot.plot = True
                 self.statusBar().showMessage("Plotting...")
-            else:
-                self.statusBar().showMessage("Press the Segment Image button first")
 
         conn.clicked.connect(tryConnect)
         self.run.clicked.connect(tryFreeze)
@@ -298,6 +309,8 @@ class MainWidget(QtWidgets.QMainWindow):
         modelayout.addWidget(cfiMode)
 
         # Add new buttons to layout
+        layout.addWidget(modelFile)
+        layout.addWidget(saveResults)
         layout.addWidget(segmentBtn)
         layout.addWidget(plotBtn)
 
@@ -346,7 +359,7 @@ class MainWidget(QtWidgets.QMainWindow):
         self.cast.destroy()
         seg_plot.logger.info("trying to shutdown")
         if seg_plot.save_results:
-            seg_plot.logger.info("saving quaternion data")
+            print("saving quaternion data")
             seg_plot.quaternions.to_csv(
                 f"{seg_plot.positions_path}/quaternion_run_{seg_plot.time_run}.csv",
                 columns=["qw", "qx", "qy", "qz"],
@@ -372,6 +385,8 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     bpp = sz / (width * height)
     image_size = (128, 128)
     seg_plot.frame_num += 1
+    if seg_plot.frame_num % 2 == 0:
+        return
     if bpp == 4:
         img_qt = QtGui.QImage(image, width, height, QtGui.QImage.Format_ARGB32)
         img_pil = Image.frombytes("RGBA", (width, height), image)
@@ -403,8 +418,6 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
                     pred_img.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}_segmented.png")
                 img_pil.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}.png")
                 seg_plot.logger.debug(f"saved {seg_plot.frame_num}")
-                seg_plot.frame_num += 1
-
             if seg_plot.plot:
                 pred_img_resized = pred_img.resize((width, height))
                 plot_frame(imu, pred_img_resized)
@@ -412,7 +425,7 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
             seg_plot.logger.error(e)
 
         if seg_plot.segment_image:
-            img_qt_resized = display_segmented_image(img_pil, image_size, pred)
+            img_qt_resized = display_segmented_image(img_pil, image_size, pred, width, height)
         else:
             img_qt_resized = img_qt
     except Exception as e:
@@ -465,9 +478,10 @@ def segment_image(img_pil, image_size):
 
     return pred, Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
 
-def display_segmented_image(img_pil, image_size, pred: np.ndarray):
+def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, original_width, original_height):
     # Resize original grayscale image to match segmentation output size
-    img_original_resized = img_pil.convert("RGBA").resize(image_size)
+    # img_original_resized = img_pil.convert("RGBA").resize(image_size)
+
 
     # Create a transparent blue mask from the prediction
     # img_colored = apply_colormap(pred, cmap_name="plasma")
@@ -490,20 +504,16 @@ def display_segmented_image(img_pil, image_size, pred: np.ndarray):
     blue_overlay[..., 3] = (seg_mask * 0.3).astype(np.uint8)  # alpha: 0–128
 
     # Convert original image to RGBA
-    original_img = img_original_resized.convert("RGBA")
-    print("previous code")
+    original_img = img_pil.convert("RGBA").resize((original_width, original_height))
 
     # Mask overlay: only blue where ultrasound border mask is white
     border_mask_np = np.array(
         seg_plot.ultrasound_border_mask.resize((128, 128), Image.Resampling.BILINEAR)
     )
     white_pixels = np.all(border_mask_np[..., :3] == 255, axis=-1)
-    print("get border map and pixels")
 
     # Apply mask
-    print("overlay shape: ", blue_overlay.shape, "mask shape: ", white_pixels.shape)
     blue_overlay[~white_pixels] = [0, 0, 0, 0]
-    print("masked the overlay")
 
     # ----------- Contour extraction & drawing -----------
     # Threshold prediction for contours
@@ -517,27 +527,27 @@ def display_segmented_image(img_pil, image_size, pred: np.ndarray):
     # Draw contours on black BGR image
     tmp = np.zeros((128, 128, 3), dtype=np.uint8)
     border = cv2.drawContours(tmp, contours, -1, (0, 0, 255), 1)
-    print("border shape:", border.shape)
 
     # Create boolean mask of red contour pixels
     red_border_mask = np.all(border == [0, 0, 255], axis=-1)
 
     # Paint those pixels red with full opacity in blue_overlay
     blue_overlay[red_border_mask] = [255, 255, 0, 255]
-    print("bordered the overlay")
 
     # ----------- Final blending -----------
     # Convert blue_overlay (numpy) to PIL
     blue_overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
-
+    blue_overlay_img = blue_overlay_img.resize((original_width, original_height))
     # Composite overlays onto original image
+    #print(f"ORGINAL / BLUE OVERLAY SIZE: {original_img.size}, {blue_overlay_img.size}")
     combined = Image.alpha_composite(original_img, blue_overlay_img)
-    print("composited the images")
+    combined = combined.resize((original_width, original_height))
+    #print(f"COMBINED SIZE: {combined.size}")
 
     # Combine (side by side) the composited image and the original image
-    final_display = Image.new("RGBA", (128 * 2, 128))
+    final_display = Image.new("RGBA", (original_width * 2, original_height))
     final_display.paste(combined, (0, 0))
-    final_display.paste(original_img, (128, 0))
+    final_display.paste(original_img, (original_width, 0))
 
     # Convert to QImage for display
     return QtGui.QImage(
@@ -659,8 +669,9 @@ class SegmentationPlot:
     frame_num: int = 0
 
 
-    def __post_init__(self):
+    def initialize(self):
         # if saving results, create directories for images and positions
+        print("intialize called")
         self.images_path = os.path.join(self.base_dir, "images")
         if self.save_results:
             self.frame_num = 0
@@ -708,31 +719,22 @@ def parse_args():
         help="Device to run the model on (cpu or cuda)",
     )
     parser.add_argument(
-        "--save-results", action="store_true", help="Whether to save results"
-    )
-    parser.add_argument(
         "--log-level",
         type=str,
         default="DEBUG",
         help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
-    parser.add_argument(
-        "--model-file",
-        type=str,
-        default="best_mhu-2.pth",
-        help="Path to the model file",
-    )
 
     args = parser.parse_args()
-    return args.device, args.save_results, args.log_level
+    return args.device, args.log_level
 
 
 ## main function
 def main():
-    device, save_results, log_level = parse_args()
+    device, log_level = parse_args()
     global seg_plot
     seg_plot = SegmentationPlot(
-        device=device, save_results=save_results, log_level=log_level
+        device=device, log_level=log_level
     )
     plot_signaller = PlotSignaller()
     plot_signaller.plot_update.connect(plot_update_handler)
@@ -748,8 +750,7 @@ def main():
     )
     app = QtWidgets.QApplication(sys.argv)
     widget = MainWidget(cast)
-    widget.resize(640, 480)
-    widget.show()
+    widget.showMaximized()
     sys.exit(app.exec())
 
 
