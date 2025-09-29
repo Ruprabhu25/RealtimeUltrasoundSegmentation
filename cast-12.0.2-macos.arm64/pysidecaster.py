@@ -408,15 +408,17 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
         if seg_plot.segment_image:
             pred, pred_img = segment_image(img_pil, image_size)
             pred_img_resized = pred_img.resize((width, height))
-            img_qt_resized = display_segmented_image(img_pil, image_size, pred, width, height)
+            img_qt_resized, largest_contour = display_segmented_image(img_pil, image_size, pred, width, height)
         else:
             img_qt_resized = img_qt
         
         if seg_plot.save_results:
                 seg_plot.positions_fp.write(f"{imu[0].qw},{imu[0].qx},{imu[0].qy},{imu[0].qz}\n")
                 print(f"saving {seg_plot.frame_num}")
-                if seg_plot.segment_image and img_qt_resized is not None:
-                    pred_img_resized.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}_segmented.png")
+                if seg_plot.segment_image and largest_contour is not None:
+                    #pred_img_resized.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}_segmented.png")
+                    pts = largest_contour.reshape(-1, 2)
+                    np.savez(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}_contour.png", pts=pts)
                 img_pil.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}.png")
                 print(f"saved {seg_plot.frame_num}")
 
@@ -488,21 +490,7 @@ def smooth_mask_morph(mask, radius=4, cycles=1, order="open-close"):
         out = cv2.morphologyEx(out, cv2.MORPH_OPEN,  k, iterations=cycles)
     return out
 
-def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, original_width, original_height):
-    # Resize original grayscale image to match segmentation output size
-    # img_original_resized = img_pil.convert("RGBA").resize(image_size)
-
-
-    # Create a transparent blue mask from the prediction
-    # img_colored = apply_colormap(pred, cmap_name="plasma")
-    # img_colored.show()
-    # time.sleep(1000)
-    # try:
-    #     print(pred)
-    #     print(pred.shape)
-    # except:
-    #     print("cant print dims")
-    # Scale prediction mask to 0–255
+def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, original_width: int, original_height: int):
     pred = pred.squeeze(0)
     #pred_thresholded = np.where(pred < 0.9, 0, 1)
 
@@ -540,7 +528,7 @@ def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, origin
 
     valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
     if not valid_contours:
-        return None
+        return None, None
 
     largest_contour = max(valid_contours, key=cv2.contourArea)
     print("largest contour size: ", cv2.contourArea(largest_contour))
@@ -578,7 +566,7 @@ def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, origin
         final_display.size[1],
         final_display.size[0] * 4,
         QtGui.QImage.Format_RGBA8888,
-    )
+    ), largest_contour
 
 def plot_update_handler(hull_3d, all_hulls_3d):
     if not seg_plot.plot_initialized:

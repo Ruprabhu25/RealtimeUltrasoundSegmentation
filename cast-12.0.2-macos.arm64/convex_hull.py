@@ -5,7 +5,7 @@ import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull # TODO maybe switch to cv2 convex hull
 from scipy.interpolate import interp1d
 from dotenv import load_dotenv
 import cv2
