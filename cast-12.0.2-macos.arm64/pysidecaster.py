@@ -29,7 +29,6 @@ from convex_hull import (
     MIN_ROTATION_RAD,
     MAX_ROTATION_RAD,
     add_shaded_quad,
-    find_probe_tip
 )
 from dataclasses import dataclass
 from logging import getLogger
@@ -163,7 +162,7 @@ class MainWidget(QtWidgets.QMainWindow):
         cfiMode = QtWidgets.QPushButton("Color Mode")
         segmentBtn = QtWidgets.QCheckBox("Segment Image")
         plotBtn = QtWidgets.QCheckBox("Plot")
-        modelFile = QtWidgets.QLineEdit(text="mhu_blank.pth", placeholderText="Model File name")
+        modelFile = QtWidgets.QLineEdit(text="best_mhu-2.pth", placeholderText="Model File name")
         saveResults = QtWidgets.QCheckBox("Save Results")
 
         # try to connect/disconnect to/from the probe
@@ -179,16 +178,24 @@ class MainWidget(QtWidgets.QMainWindow):
                         seg_plot.model_file = modelFile.text()
                         seg_plot.initialize()
                     except Exception as e:
-                        seg_plot.logger.error(e)
+                        print(e)
                 else:
                     self.statusBar().showMessage(
                         "Failed to connect to {0}".format(ip.text())
                     )
             else:
+                print("trying to disconnect")
                 if cast.disconnect():
-                    seg_plot.logger.info("disconnected")
+                    print("disconnected")
                     if seg_plot.save_results:
-                        seg_plot.logger.info(f"size of quaternion data: seg_plot.quaternions.count()")
+                        print(f"size of quaternion data: seg_plot.quaternions.count()")
+                        print("saving quaternion data")
+                        # seg_plot.quaternions.to_csv(
+                        #     f"{seg_plot.positions_path}/quaternion_run_{seg_plot.time_run}.csv",
+                        #     columns=["qw", "qx", "qy", "qz"],
+                        #     index=False,
+                        # )
+                        seg_plot.positions_fp.close()
                     self.statusBar().showMessage("Disconnected")
                     conn.setText("Connect")
                 else:
@@ -355,19 +362,21 @@ class MainWidget(QtWidgets.QMainWindow):
     # handles shutdown
     @Slot()
     def shutdown(self):
+        print("trying to shutdown")
         if sys.platform.startswith("linux"):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
-        seg_plot.logger.info("trying to shutdown")
-        if seg_plot.save_results:
-            print("saving quaternion data")
-            seg_plot.quaternions.to_csv(
-                f"{seg_plot.positions_path}/quaternion_run_{seg_plot.time_run}.csv",
-                columns=["qw", "qx", "qy", "qz"],
-                index=False,
-            )
-        seg_plot.logger.info("Shutting down plot")
+        print("trying to shutdown")
+        # if seg_plot.save_results:
+        #     print("saving quaternion data")
+        #     seg_plot.quaternions.to_csv(
+        #         f"{seg_plot.positions_path}/quaternion_run_{seg_plot.time_run}.csv",
+        #         columns=["qw", "qx", "qy", "qz"],
+        #         index=False,
+        #     )
+        seg_plot.positions_fp.close()
+        print("Shutting down plot")
         if seg_plot.plot_initialized:
             plt.ioff()
             plt.close("all")
@@ -398,40 +407,23 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     try:
         if seg_plot.segment_image:
             pred, pred_img = segment_image(img_pil, image_size)
-        try:
-            if seg_plot.save_results:
-                seg_plot.quaternions = pd.concat(
-                    [
-                        seg_plot.quaternions,
-                        pd.DataFrame(
-                            [
-                                {
-                                    "qw": imu[0].qw,
-                                    "qx": imu[0].qx,
-                                    "qy": imu[0].qy,
-                                    "qz": imu[0].qz,
-                                }
-                            ]
-                        ),
-                    ]
-                )
-                seg_plot.logger.debug(f"saving {seg_plot.frame_num}")
-                if seg_plot.segment_image:
-                    pred_img.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}_segmented.png")
-                img_pil.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}.png")
-                seg_plot.logger.debug(f"saved {seg_plot.frame_num}")
-            if seg_plot.plot:
-                pred_img_resized = pred_img.resize((width, height))
-                plot_frame(imu, pred_img_resized)
-        except Exception as e:
-            seg_plot.logger.error(e)
-
-        if seg_plot.segment_image:
+            pred_img_resized = pred_img.resize((width, height))
             img_qt_resized = display_segmented_image(img_pil, image_size, pred, width, height)
         else:
             img_qt_resized = img_qt
+        
+        if seg_plot.save_results:
+                seg_plot.positions_fp.write(f"{imu[0].qw},{imu[0].qx},{imu[0].qy},{imu[0].qz}\n")
+                print(f"saving {seg_plot.frame_num}")
+                if seg_plot.segment_image and img_qt_resized is not None:
+                    pred_img_resized.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}_segmented.png")
+                img_pil.save(f"{seg_plot.images_path}/{seg_plot.time_run}/{seg_plot.frame_num}.png")
+                print(f"saved {seg_plot.frame_num}")
+
+        if seg_plot.plot:
+            plot_frame(imu, pred_img_resized)
     except Exception as e:
-        seg_plot.logger.error(e)
+        print(e)
         img_qt_resized = img_qt
 
     signaller.usimage = img_qt_resized
@@ -697,8 +689,6 @@ class SegmentationPlot:
     plot_signaller: PlotSignaller = None  # signaller for plot updates
     last_quat: list = None
     frame_num: int = 0
-    ultrasound_border_mask: Image = Image.open('images/ultrasound_mask.png')
-
 
     def initialize(self):
         # if saving results, create directories for images and positions
@@ -710,13 +700,19 @@ class SegmentationPlot:
             os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
             self.positions_path = os.path.join(self.base_dir, "positions")
             os.makedirs(self.positions_path, exist_ok=True)
-        self.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
+        #self.quaternions = pd.DataFrame(columns=["qw", "qx", "qy", "qz"])
+            self.positions_fp = open(f"{seg_plot.positions_path}/quaternion_run_{seg_plot.time_run}.csv", "w")
+            self.positions_fp.write("qw,qx,qy,qz\n")
+        
+            
 
         # initialize model
         model_path = os.path.join(self.base_dir, self.model_file)
         self.model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(self.device)
         self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model.eval()
+
+        self.ultrasound_border_mask: Image = Image.open('images/ultrasound_mask.png')
 
         # initialize plotting variables
         self.plot_initialized = False

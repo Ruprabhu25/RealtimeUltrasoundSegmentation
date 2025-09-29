@@ -249,7 +249,7 @@ def main():
     load_dotenv()
     base_dir = os.environ["BASE_DIR"]
     quat_path = f"{base_dir}/positions/quaternion_run_2025-06-12_16-11-14.csv"
-    image_dir = f"{base_dir}/images/2025-06-12_16-11-14"
+    image_dir = f"{base_dir}/images/2025-09-26_16:12:21/resized"
 
     # Load data
     rotations, centers = load_quaternions_and_centers(quat_path)
