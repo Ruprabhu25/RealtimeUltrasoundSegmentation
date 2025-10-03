@@ -202,7 +202,7 @@ class MainWidget(QtWidgets.QMainWindow):
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
         global quaternions
-        quaternions.to_csv(f"{os.environ["BASE_DIR"]}/positions/quaternion_run_{datetime.datetime.now()}.csv")
+        quaternions.to_csv(f'{os.environ["BASE_DIR"]}/positions/quaternion_run_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv')
         QtWidgets.QApplication.quit()
 
 

@@ -536,7 +536,7 @@ class SegmentationPlot:
         # if saving results, create directories for images and positions
         if self.save_results:
             self.frame_num = 0
-            self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             self.images_path = os.path.join(self.base_dir, "images")
             os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
             self.positions_path = os.path.join(self.base_dir, "positions")

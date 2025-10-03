@@ -47,7 +47,7 @@ model_path = os.path.join(os.environ["BASE_DIR"], os.environ["MODEL_PATH"])
 
 frame_num = 0
 quaternions = pd.DataFrame(columns=['qw', 'qx', 'qy', 'qz'])
-time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 os.makedirs(os.path.join(images_path, time_run), exist_ok=True)
 
 device = 'cpu'
