@@ -137,7 +137,7 @@ class MainWidget(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self, parent)
 
         self.cast = cast
-        self.setWindowTitle("Clarius Cast Demo")
+        self.setWindowTitle("MHU Realtime Ultrasound Segmentation")
 
         # create central widget within main window
         central = QtWidgets.QWidget()
@@ -492,38 +492,27 @@ def smooth_mask_morph(mask, radius=4, cycles=1, order="open-close"):
 
 def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, original_width: int, original_height: int):
     pred = pred.squeeze(0)
-    #pred_thresholded = np.where(pred < 0.9, 0, 1)
-
     seg_mask = (pred * 255).astype(np.uint8)
 
-    # Create blue overlay with transparency based on seg_mask
+    # Create blue overlay with transparency
     blue_overlay = np.zeros((128, 128, 4), dtype=np.uint8)
-    blue_overlay[..., 2] = 255  # full blue
-    blue_overlay[..., 3] = (seg_mask * 0.3).astype(np.uint8)  # alpha: 0–128
+    blue_overlay[..., 2] = 255  # blue
+    blue_overlay[..., 3] = (seg_mask * 0.3).astype(np.uint8)  # semi-transparent
 
-    # Convert original image to RGBA
+    # Convert original image
     original_img = img_pil.convert("RGBA").resize((original_width, original_height))
 
-    # Mask overlay: only blue where ultrasound border mask is white
+    # Apply ultrasound border mask
     border_mask_np = np.array(
         seg_plot.ultrasound_border_mask.resize((128, 128), Image.Resampling.BILINEAR)
     )
     white_pixels = np.all(border_mask_np[..., :3] == 255, axis=-1)
-
-    # Apply mask
     blue_overlay[~white_pixels] = [0, 0, 0, 0]
 
-    # ----------- Contour extraction & drawing -----------
-    # Threshold prediction for contours
+    # ------- Contour detection (on small prediction) -------
+    pred_smoothed = smooth_mask_morph(pred)
 
-    pred_smoothed = smooth_mask_morph(pred)    
-    # pred_binary = (pred > 0.5).astype(np.uint8) * 255
-
-    # Find contours
-    contours, hierarchy = cv2.findContours(
-        pred_smoothed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
-    )
-
+    contours, _ = cv2.findContours(pred_smoothed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     print("number of contours found: ", len(contours))
 
     valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
@@ -531,35 +520,31 @@ def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, origin
         return None, None
 
     largest_contour = max(valid_contours, key=cv2.contourArea)
-    print("largest contour size: ", cv2.contourArea(largest_contour))
 
-    # Draw contours on black BGR image
-    tmp = np.zeros((128, 128, 3), dtype=np.uint8)
-    border = cv2.drawContours(tmp, largest_contour, -1, (0, 0, 255), 1)
-    print("border shape:", border.shape)
+    # -------- Resize overlay first --------
+    blue_overlay_img = Image.fromarray(blue_overlay, mode="RGBA").resize((original_width, original_height))
+    blue_overlay_np = np.array(blue_overlay_img)
 
-    # Create boolean mask of red contour pixels
-    red_border_mask = np.all(border == [0, 0, 255], axis=-1)
+    # -------- Scale and draw contour on resized overlay --------
+    scale_x = original_width / 128
+    scale_y = original_height / 128
+    scaled_contour = np.array([[[int(pt[0][0] * scale_x), int(pt[0][1] * scale_y)]] for pt in largest_contour])
 
-    # Paint those pixels red with full opacity in blue_overlay
-    blue_overlay[red_border_mask] = [255, 255, 0, 255]
+    # Draw scaled contour in yellow
+    cv2.drawContours(blue_overlay_np, [scaled_contour], -1, (255, 255, 0, 255), 2)  # RGBA: yellow with full alpha
 
-    # ----------- Final blending -----------
-    # Convert blue_overlay (numpy) to PIL
-    blue_overlay_img = Image.fromarray(blue_overlay, mode="RGBA")
-    blue_overlay_img = blue_overlay_img.resize((original_width, original_height))
-    # Composite overlays onto original image
-    #print(f"ORGINAL / BLUE OVERLAY SIZE: {original_img.size}, {blue_overlay_img.size}")
+    # Re-convert back to PIL
+    blue_overlay_img = Image.fromarray(blue_overlay_np, mode="RGBA")
+
+    # Final compositing
     combined = Image.alpha_composite(original_img, blue_overlay_img)
-    combined = combined.resize((original_width, original_height))
-    #print(f"COMBINED SIZE: {combined.size}")
 
-    # Combine (side by side) the composited image and the original image
+    # Side-by-side comparison
     final_display = Image.new("RGBA", (original_width * 2, original_height))
     final_display.paste(combined, (0, 0))
     final_display.paste(original_img, (original_width, 0))
 
-    # Convert to QImage for display
+    # Return Qt QImage and contour
     return QtGui.QImage(
         final_display.tobytes("raw", "RGBA"),
         final_display.size[0],
