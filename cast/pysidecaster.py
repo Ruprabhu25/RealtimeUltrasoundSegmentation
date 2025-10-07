@@ -695,7 +695,7 @@ class SegmentationPlot:
             
 
         # initialize model
-        model_path = os.path.join(self.base_dir, self.model_file)
+        model_path = os.path.join(self.base_dir, "mhu", self.model_file)
         self.model = MultiHeadUNet(heads=3, feat_dim=64, out_ch=1).to(self.device)
         self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model.eval()
