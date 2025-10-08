@@ -14,6 +14,11 @@ from scipy.interpolate import splprep, splev
 from model.us_unet2 import MultiHeadUNet
 import cv2
 import matplotlib.pyplot as plt
+
+if sys.platform == "win32":
+    dll_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "binaries", "windows_x86_64", "cast.dll"))
+    ctypes.CDLL(dll_path)
+
 import pyclariuscast
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Slot
@@ -684,7 +689,7 @@ class SegmentationPlot:
         self.images_path = os.path.join(self.base_dir, "images")
         if self.save_results:
             self.frame_num = 0
-            self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            self.time_run = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             os.makedirs(os.path.join(self.images_path, self.time_run), exist_ok=True)
             self.positions_path = os.path.join(self.base_dir, "positions")
             os.makedirs(self.positions_path, exist_ok=True)
