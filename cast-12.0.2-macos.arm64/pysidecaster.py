@@ -396,6 +396,7 @@ def newProcessedImage(image, width, height, sz, micronsPerPixel, timestamp, angl
     bpp = sz / (width * height)
     image_size = (128, 128)
     seg_plot.frame_num += 1
+    print(f"ingested {seg_plot.frame_num} at {datetime.datetime.now()}")
     if seg_plot.frame_num % 2 == 0:
         return
     if bpp == 4:
@@ -468,9 +469,12 @@ def segment_image(img_pil, image_size):
     img_resized = img_resized.reshape(128, 128, 1)
     img_resized = torch.from_numpy(img_resized.astype(np.float32)/255.0).unsqueeze(0)
     img_resized = img_resized.permute(0, 3, 1, 2)
+    print(f"before segmentation {seg_plot.frame_num} at {datetime.datetime.now()}")
     with torch.no_grad():
         _, pred = seg_plot.model(img_resized)
         pred = pred.squeeze(0).numpy()
+    print(f"after segmentation {seg_plot.frame_num} at {datetime.datetime.now()}")
+
 
     return pred, Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
 
@@ -512,7 +516,9 @@ def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, origin
     # ------- Contour detection (on small prediction) -------
     pred_smoothed = smooth_mask_morph(pred)
 
+    print(f"before finding contours {seg_plot.frame_num} at {datetime.datetime.now()}")
     contours, _ = cv2.findContours(pred_smoothed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    print(f"after finding contours {seg_plot.frame_num} at {datetime.datetime.now()}")
     print("number of contours found: ", len(contours))
 
     valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
@@ -531,7 +537,9 @@ def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, origin
     scaled_contour = np.array([[[int(pt[0][0] * scale_x), int(pt[0][1] * scale_y)]] for pt in largest_contour])
 
     # Draw scaled contour in yellow
+    print(f"before drawing contours {seg_plot.frame_num} at {datetime.datetime.now()}")
     cv2.drawContours(blue_overlay_np, [scaled_contour], -1, (255, 255, 0, 255), 2)  # RGBA: yellow with full alpha
+    print(f"after drawing contours {seg_plot.frame_num} at {datetime.datetime.now()}")
 
     # Re-convert back to PIL
     blue_overlay_img = Image.fromarray(blue_overlay_np, mode="RGBA")
