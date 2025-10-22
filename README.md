@@ -13,20 +13,35 @@ conda init --all
 
 # setup (Mac-Intel chip-x86_64)
 If you are using an older, intel based mac, use the following instructions. 
-In the cast-12.0.2-macos.x86_64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
+In the cast/binaries/macos_x86_64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
 
 the command to copy the dylib to the correct folder should look something like this:
 ```bash
 cp ./cast/binaries/macos_x86_64/libcast.dylib /opt/homebrew/Caskroom/miniconda/us/bin/lib/
 ```
+
+Also copy the respective pyclariuscast.so to the same directory as the script you want to execute:
+```bash
+cp ./cast/binaries/macos_x86_64/pyclariuscast.so ./cast
+```
+
+
 # setup (Mac-Apple Silicon-ARM64)
 If you are using a newer apple silicon based mac, use the following command: 
-In the cast-12.0.2-macos.arm64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
+In the cast/binaries/macos_arm64 folder there is a libcast.dylib file that you need to copy over to your conda environment's lib folder.
 
 the command to copy the dylib to the correct folder should look something like this:
 ```bash
 cp ./cast/binaries/macos_arm64/libcast.dylib /opt/homebrew/Caskroom/miniconda/us/bin/lib/
 ```
+
+Also copy the respective pyclariuscast.so to the same directory as the script you want to execute:
+```bash
+cp ./cast/binaries/macos_arm64/pyclariuscast.so ./cast
+```
+
+# setup (Windows)
+
 
 # installing dependencies (Mac)
 - all required dependencies can be installed using a conda environment using the following command: 
