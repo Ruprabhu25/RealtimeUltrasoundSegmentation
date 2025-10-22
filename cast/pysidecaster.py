@@ -32,6 +32,10 @@ from convex_hull import (
 from dataclasses import dataclass
 from logging import getLogger
 
+if sys.platform == "win32":
+    dll_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "binaries", "windows_x86_64", "cast.dll"))
+    ctypes.CDLL(dll_path)
+
 # sys.path.append("C:\\Users\\Junfei\\Desktop\\Repos\\RealtimeUltrasoundSegmentation")
 # from Efficientunet.efficientunet import get_efficientunet_b0
 
