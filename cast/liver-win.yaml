@@ -1,4 +1,4 @@
-name: liver-win
+name: us
 channels:
   - defaults
 dependencies:
