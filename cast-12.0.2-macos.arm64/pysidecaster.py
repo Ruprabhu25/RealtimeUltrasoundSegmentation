@@ -362,12 +362,19 @@ class MainWidget(QtWidgets.QMainWindow):
     # handles shutdown
     @Slot()
     def shutdown(self):
+        if seg_plot.segmentation_times:
+            print("segmentation time stats")
+            print(f"mean: {np.mean(seg_plot.segmentation_times)}, std: {np.std(seg_plot.segmentation_times)}")        
+        if seg_plot.contour_times:
+            print("contour time stats")
+            print(f"mean: {np.mean(seg_plot.contour_times)}, std: {np.std(seg_plot.contour_times)}")
         print("trying to shutdown")
         if sys.platform.startswith("linux"):
             # unload the shared library before destroying the cast object
             ctypes.CDLL("libc.so.6").dlclose(libcast_handle)
         self.cast.destroy()
         print("trying to shutdown")
+        
         # if seg_plot.save_results:
         #     print("saving quaternion data")
         #     seg_plot.quaternions.to_csv(
@@ -469,11 +476,13 @@ def segment_image(img_pil, image_size):
     img_resized = img_resized.reshape(128, 128, 1)
     img_resized = torch.from_numpy(img_resized.astype(np.float32)/255.0).unsqueeze(0)
     img_resized = img_resized.permute(0, 3, 1, 2)
-    print(f"before segmentation {seg_plot.frame_num} at {datetime.datetime.now()}")
+    before_seg = datetime.datetime.now()
     with torch.no_grad():
         _, pred = seg_plot.model(img_resized)
         pred = pred.squeeze(0).numpy()
-    print(f"after segmentation {seg_plot.frame_num} at {datetime.datetime.now()}")
+    after_seg = datetime.datetime.now()
+    #print(f"after segmentation {seg_plot.frame_num} at {datetime.datetime.now()}")
+    seg_plot.segmentation_times.append((after_seg - before_seg).total_seconds() * 1000)
 
 
     return pred, Image.fromarray((pred.squeeze() * 255).astype(np.uint8))
@@ -516,9 +525,12 @@ def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, origin
     # ------- Contour detection (on small prediction) -------
     pred_smoothed = smooth_mask_morph(pred)
 
-    print(f"before finding contours {seg_plot.frame_num} at {datetime.datetime.now()}")
+    before_contours = datetime.datetime.now()
+    #print(f"before finding contours {seg_plot.frame_num} at {datetime.datetime.now()}")
     contours, _ = cv2.findContours(pred_smoothed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    print(f"after finding contours {seg_plot.frame_num} at {datetime.datetime.now()}")
+    after_contours = datetime.datetime.now()
+    #print(f"after finding contours {seg_plot.frame_num} at {datetime.datetime.now()}")
+    seg_plot.contour_times.append((after_contours - before_contours).total_seconds() * 1000)
     print("number of contours found: ", len(contours))
 
     valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
@@ -537,9 +549,7 @@ def display_segmented_image(img_pil: Image, image_size, pred: np.ndarray, origin
     scaled_contour = np.array([[[int(pt[0][0] * scale_x), int(pt[0][1] * scale_y)]] for pt in largest_contour])
 
     # Draw scaled contour in yellow
-    print(f"before drawing contours {seg_plot.frame_num} at {datetime.datetime.now()}")
     cv2.drawContours(blue_overlay_np, [scaled_contour], -1, (255, 255, 0, 255), 2)  # RGBA: yellow with full alpha
-    print(f"after drawing contours {seg_plot.frame_num} at {datetime.datetime.now()}")
 
     # Re-convert back to PIL
     blue_overlay_img = Image.fromarray(blue_overlay_np, mode="RGBA")
@@ -670,6 +680,8 @@ class SegmentationPlot:
     plot_signaller: PlotSignaller = None  # signaller for plot updates
     last_quat: list = None
     frame_num: int = 0
+    segmentation_times = []
+    contour_times = []
 
     def initialize(self):
         # if saving results, create directories for images and positions
