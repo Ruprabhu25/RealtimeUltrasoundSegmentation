@@ -41,6 +41,11 @@ cp ./cast/binaries/macos_arm64/pyclariuscast.so ./cast
 ```
 
 # setup (Windows)
+Copy over the cast.lib file in cast/binaries/windows_x86_64 to the liver-win conda folder.
+It should look something like this:
+```bash
+cp cast/binaries/windows_x86_64/cast.lib <CONDA_ENV>/bin/lib
+```
 
 
 # installing dependencies (Mac)
